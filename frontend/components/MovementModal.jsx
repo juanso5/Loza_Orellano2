@@ -90,10 +90,25 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
         if (!res.ok) throw new Error();
         const j = await res.json();
         const list = Array.isArray(j?.data) ? j.data : [];
-        const norm = list.map((f) => ({
-          id: f.id ?? f.id_fondo ?? 0,
-          name: f.carteraNombre || f.tipoCarteraNombre || `Fondo ${f.id}`,
-        })).filter((f) => f.id);
+        const norm = list.map((f) => {
+          // Obtener el nombre de la cartera desde diferentes posibles ubicaciones
+          let name = 'Sin nombre';
+          if (f.tipo_cartera?.descripcion) {
+            name = f.tipo_cartera.descripcion;
+          } else if (f.carteraNombre) {
+            name = f.carteraNombre;
+          } else if (f.tipoCarteraNombre) {
+            name = f.tipoCarteraNombre;
+          } else {
+            name = `Cartera ${f.id ?? f.id_fondo ?? ''}`;
+          }
+          
+          return {
+            id: f.id ?? f.id_fondo ?? 0,
+            name: name,
+          };
+        }).filter((f) => f.id);
+        
         if (!ignore) {
           setFunds(norm);
           if (norm.length > 0 && !fondoId) setFondoId(norm[0].id);

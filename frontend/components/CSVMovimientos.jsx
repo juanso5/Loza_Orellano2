@@ -101,7 +101,7 @@ function MovementsContent({ onSelectClient, onAdd }) {
         <ClientsPanel onSelectClient={onSelectClient} />
         <main className="content-area">
           <section className="last-movements-section">
-            <h2>├Ültimos movimientos</h2>
+            <h2>Últimos movimientos</h2>
             <div className="table-wrap" style={{ padding: 0 }}>
               <LastMovementsTable
                 rows={filteredItems}

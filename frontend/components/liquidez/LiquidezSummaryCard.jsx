@@ -42,7 +42,7 @@ export default function LiquidezSummaryCard({ estado, loading }) {
     {
       title: 'Liquidez Total',
       value: estado.liquidezTotal || estado.total_usd,
-      icon: '­ƒÆ░',
+      iconClass: 'fas fa-coins',
       color: '#3b82f6',
       bgColor: '#dbeafe',
       description: 'Pool completo del cliente'
@@ -50,7 +50,7 @@ export default function LiquidezSummaryCard({ estado, loading }) {
     {
       title: 'Liquidez Asignada',
       value: estado.liquidezAsignada || estado.asignada_usd,
-      icon: '­ƒôè',
+      iconClass: 'fas fa-chart-pie',
       color: '#10b981',
       bgColor: '#d1fae5',
       percentage: estado.porcentajeAsignado || Math.round((estado.asignada_usd / estado.total_usd) * 100) || 0,
@@ -59,18 +59,18 @@ export default function LiquidezSummaryCard({ estado, loading }) {
     {
       title: 'Liquidez Disponible',
       value: estado.liquidezDisponible || estado.disponible_usd,
-      icon: '­ƒÆÁ',
+      iconClass: 'fas fa-money-bill-wave',
       color: '#8b5cf6',
       bgColor: '#ede9fe',
       description: 'Pendiente de asignar'
     },
     {
-      title: 'Total Dep├│sitos',
+      title: 'Total Depósitos',
       value: estado.totalDepositos || estado.depositos_usd,
-      icon: '­ƒôê',
+      iconClass: 'fas fa-piggy-bank',
       color: '#f59e0b',
       bgColor: '#fef3c7',
-      description: 'Hist├│rico de ingresos'
+      description: 'Histórico de ingresos'
     }
   ];
 
@@ -106,9 +106,10 @@ export default function LiquidezSummaryCard({ estado, loading }) {
               padding: '0.75rem', 
               borderRadius: '8px', 
               backgroundColor: card.bgColor,
-              fontSize: '1.5rem'
+              fontSize: '1.5rem',
+              color: card.color
             }}>
-              {card.icon}
+              <i className={card.iconClass}></i>
             </div>
             {card.percentage !== undefined && (
               <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '600' }}>

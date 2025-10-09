@@ -49,9 +49,10 @@ export default function FondoCard({ fondo, onAsignar }) {
               padding: '0.5rem', 
               backgroundColor: '#dbeafe', 
               borderRadius: '8px',
-              fontSize: '1.25rem'
+              fontSize: '1.25rem',
+              color: '#3b82f6'
             }}>
-              ­ƒÆ╝
+              <i className="fas fa-briefcase"></i>
             </div>
             <div>
               <h3 style={{ fontWeight: '600', color: '#111827', margin: 0, fontSize: '1rem' }}>

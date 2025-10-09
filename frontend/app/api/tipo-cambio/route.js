@@ -93,8 +93,8 @@ export async function GET(req) {
         data: data ? mapRow(data) : null 
       });
     }
-    
-    // Obtener todos los tipos de cambio (├║ltimos 30 d├¡as por defecto)
+
+    // Obtener todos los tipos de cambio (Ultimos 30 días por defecto)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     

@@ -1,11 +1,11 @@
-﻿// lib/fondoHelpers.js
+// lib/fondoHelpers.js
 // =====================================================
-// HELPERS PARA C├üLCULOS DE FONDOS
+// HELPERS PARA CALCULOS DE FONDOS
 // =====================================================
 
 /**
- * Calcula estado de fondo usando VISTA de DB (100x m├ís r├ípido)
- * Ya no hace m├║ltiples queries, solo lee la vista pre-calculada
+ * Calcula estado de fondo usando VISTA de DB (100x mas rapido)
+ * Ya no hace multiples queries, solo lee la vista pre-calculada
  */
 export async function calcularEstadoFondo(supabaseClient, clienteId, fondoId) {
   try {
@@ -90,9 +90,79 @@ export async function validarSaldoParaCompra(supabaseClient, clienteId, fondoId,
 }
 
 /**
- * Funci├│n legacy - mantener por compatibilidad con c├│digo antiguo
+ * Funcion legacy - mantener por compatibilidad con codigo antiguo
  */
 export async function calcularSaldoFondo(supabaseClient, clienteId, fondoId) {
   const estado = await calcularEstadoFondo(supabaseClient, clienteId, fondoId);
   return estado.saldoDisponible;
+}
+
+/**
+ * Calcula el progreso de un fondo basado en fecha de alta y plazo
+ * Progreso del periodo = (hoy - fecha_alta) / (fecha_alta + plazo - fecha_alta)
+ */
+export function computeProgress(fechaAlta, tipoPlazo, plazo) {
+  if (!fechaAlta || plazo == null) return 0;
+  const start = new Date(fechaAlta);
+  if (Number.isNaN(start.getTime())) return 0;
+
+  const end = new Date(start);
+  const p = Number(plazo) || 0;
+  if (p <= 0) return 0;
+
+  if ((tipoPlazo || "").toLowerCase() === "meses") {
+    end.setMonth(end.getMonth() + p);
+  } else if ((tipoPlazo || "").toLowerCase() === "dias") {
+    end.setDate(end.getDate() + p);
+  } else {
+    return 0;
+  }
+
+  const now = new Date();
+  const total = end.getTime() - start.getTime();
+  if (total <= 0) return 1;
+  const elapsed = now.getTime() - start.getTime();
+  return Math.max(0, Math.min(1, elapsed / total));
+}
+
+/**
+ * Calcula el monto firmado segun tipo de movimiento
+ * compra|venta -> +|-
+ */
+export function signedAmount(type, n) {
+  return (String(type || "").toLowerCase() === "venta" ? -1 : 1) * (Number(n) || 0);
+}
+
+/**
+ * Agrega fondos por cartera basandose en movimientos
+ * Construye fondos por cartera: [{ id, name, nominal }]
+ */
+export function aggregateFundsByPortfolio(portfolios, movements) {
+  const byPortfolio = new Map(); // pid -> Map(key -> { id, name, nominal })
+  for (const m of movements) {
+    const pid = Number(m.portfolioId) || null;
+    if (!pid) continue;
+    const name = (m.fund || "").trim();
+    if (!name) continue;
+
+    const delta = signedAmount(m.type, m.amount);
+    let map = byPortfolio.get(pid);
+    if (!map) {
+      map = new Map();
+      byPortfolio.set(pid, map);
+    }
+    // clave por nombre (si hubiera id de especie lo podriamos usar)
+    const key = name.toLowerCase();
+    const prev = map.get(key) || { id: `n:${key}`, name, nominal: 0 };
+    prev.nominal = (Number(prev.nominal) || 0) + delta;
+    map.set(key, prev);
+  }
+
+  return portfolios.map((p) => {
+    const pm = byPortfolio.get(Number(p.id)) || new Map();
+    const funds = Array.from(pm.values())
+      .filter((f) => Number(f.nominal) > 0)
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+    return { ...p, funds };
+  });
 }

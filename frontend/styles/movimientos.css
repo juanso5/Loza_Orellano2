@@ -27,10 +27,23 @@ body .sidebar {
 /* --- Base layout --- */
 :root { --primary: #2563eb; --panel: #ecf0f1; --muted:#6b7280; --bg:#f4f6f9; --card:#fff; }
 *{box-sizing:border-box}
-body { font-family: 'Roboto', sans-serif; margin:0; background:var(--bg); color:#0f172a; }
+html, body { 
+  font-family: 'Roboto', sans-serif; 
+  margin:0; 
+  padding: 0;
+  background:var(--bg); 
+  color:#0f172a; 
+  overflow-x: hidden;
+  height: 100%;
+}
 
 /* main */
-.main-content { margin-left:220px; transition: margin-left 0.3s; padding:20px; }
+.main-content { 
+  margin-left:220px; 
+  transition: margin-left 0.3s; 
+  padding:20px;
+  min-height: 100vh;
+}
 .main-content.expanded { margin-left:60px; }
 
 /* header */
@@ -59,6 +72,24 @@ body { font-family: 'Roboto', sans-serif; margin:0; background:var(--bg); color:
 
 /* content area */
 .content-area { margin-top:6px; }
+
+/* fondos layout - sin overflow adicional */
+.fondos-layout { 
+  overflow: visible; 
+}
+
+/* clients column - específico para movimientos */
+.clients-column {
+  height: fit-content;
+  max-height: none;
+}
+
+/* sobrescribir el max-height del fondos.css para la lista de clientes */
+#clients-list,
+.clients-list {
+  max-height: calc(100vh - 200px) !important;
+  overflow-y: auto;
+}
 
 /* clients accordion */
 .clients-container { display:flex; flex-direction:column; gap:12px; margin-bottom:18px; }

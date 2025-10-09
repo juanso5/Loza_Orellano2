@@ -6,37 +6,16 @@ import ClienteFormModal from "../../components/ClienteFormModal";
 import ClienteViewModal from "../../components/ClienteViewModal";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 import styles from "../../styles/clientes.module.css";
+import { useLocalStorageState } from "@/lib/hooks";
+import { formatCurrency, onlyDigits, formatCuit, normalize } from "@/lib/utils/formatters";
+import { formatEsDate, nowLocalDate } from "@/lib/utils/dateUtils";
 
-// Utils
-const onlyDigits = (s = "") => s.replace(/\D/g, "");
-const fmtARS = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 2 });
-
-function normalize(s = "") {
-  return s.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-function formatCuit(digits) {
-  const d = onlyDigits(digits);
-  if (d.length !== 11) return digits || "";
-  return `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}`;
-}
-function pad2(n) { return n.toString().padStart(2, "0"); }
-function nowLocalDate() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-function formatEsDate(isoStr = "") {
-  if (!isoStr) return "";
-  const d = new Date(isoStr);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" });
-}
+// Formatter ARS para UI
+const fmtARS = formatCurrency("ARS");
 
 // ——— Página
 export default function ClientesPage() {
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    try { const saved = localStorage.getItem('sidebarCollapsed'); if (saved!==null) setCollapsed(JSON.parse(saved)); } catch {}
-  }, []);
+  const [collapsed, setCollapsed] = useLocalStorageState('sidebarCollapsed', false);
 
   const [clients, setClients] = useState([]);
   const [query, setQuery] = useState("");
@@ -200,13 +179,7 @@ export default function ClientesPage() {
     <>
       <Sidebar
         collapsed={collapsed}
-        toggleSidebar={() => {
-          setCollapsed((c) => {
-            const n = !c;
-            try { localStorage.setItem("sidebarCollapsed", JSON.stringify(n)); } catch {}
-            return n;
-          });
-        }}
+        toggleSidebar={() => setCollapsed(c => !c)}
       />
 
       <div className={`main-content ${collapsed ? "expanded" : ""}`} style={{ padding: 24 }}>

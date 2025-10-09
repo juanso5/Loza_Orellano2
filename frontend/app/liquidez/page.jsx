@@ -6,6 +6,7 @@ import LiquidezSummaryCard from "../../components/liquidez/LiquidezSummaryCard";
 import FondoCard from "../../components/liquidez/FondoCard";
 import MovimientoModal from "../../components/liquidez/MovimientoModal";
 import AsignacionModal from "../../components/liquidez/AsignacionModal";
+import { LoadingSpinner } from "../../components/ui";
 import { useAppData } from "../../components/AppDataProvider";
 import "../../styles/liquidez.css";
 
@@ -176,11 +177,11 @@ export default function LiquidezPage() {
                         color: '#6b7280',
                         marginTop: '2px'
                       }}>
-                        💰 Liquidez
+                        <i className="fas fa-wallet" style={{ marginRight: '0.25rem' }}></i> Liquidez
                       </div>
                     </div>
                     {isSelected && (
-                      <div style={{ color: '#3b82f6', fontSize: '1rem', fontWeight: 'bold' }}>✓</div>
+                      <div style={{ color: '#3b82f6', fontSize: '1rem', fontWeight: 'bold' }}><i className="fas fa-check"></i></div>
                     )}
                   </div>
                 );
@@ -192,24 +193,24 @@ export default function LiquidezPage() {
         <div className="content-panel">
           <div className="page-header">
             <div>
-              <h1 className="page-title">💰 Gestión de Liquidez</h1>
+              <h1 className="page-title"><i className="fas fa-money-bill-wave"></i> Gestión de Liquidez</h1>
               {clienteActual && <p className="page-subtitle">{clienteActual.name}</p>}
             </div>
             <div className="action-buttons">
-              <button className="btn primary" onClick={() => openMovimientoModal("deposito")} disabled={!selectedClientId || loading.liquidez}>➕ Nuevo Depósito</button>
-              <button className="btn danger" onClick={() => openMovimientoModal("extraccion")} disabled={!selectedClientId || loading.liquidez}>➖ Nueva Extracción</button>
+              <button className="btn primary" onClick={() => openMovimientoModal("deposito")} disabled={!selectedClientId || loading.liquidez}><i className="fas fa-plus-circle"></i> Nuevo Depósito</button>
+              <button className="btn danger" onClick={() => openMovimientoModal("extraccion")} disabled={!selectedClientId || loading.liquidez}><i className="fas fa-minus-circle"></i> Nueva Extracción</button>
             </div>
           </div>
 
-          {error && <div className="error-message">⚠️ {error}</div>}
-          {loading.liquidez && <div className="loading-container"><div className="spinner"></div><p>Cargando datos de liquidez...</p></div>}
+          {error && <div className="error-message"><i className="fas fa-exclamation-triangle"></i> {error}</div>}
+          {loading.liquidez && <LoadingSpinner text="Cargando datos de liquidez..." />}
 
           {!loading.liquidez && selectedClientId && (
             <>
               <LiquidezSummaryCard estado={estadoLiquidez} loading={loading.liquidez} />
               {estadoLiquidez?.fondos && estadoLiquidez.fondos.length > 0 && (
                 <div className="section">
-                  <h2 className="section-title">📊 Fondos del Cliente</h2>
+                  <h2 className="section-title"><i className="fas fa-chart-bar"></i> Fondos del Cliente</h2>
                   <div className="fondos-grid">
                     {estadoLiquidez.fondos.map((fondo) => (<FondoCard key={fondo.id_fondo} fondo={{ ...fondo, dineroEnAcciones: fondo.dineroInvertido }} onAsignar={openAsignacionModal} />))}
                   </div>
@@ -217,7 +218,7 @@ export default function LiquidezPage() {
               )}
               {movimientosLiquidez.length > 0 && (
                 <div className="section">
-                  <h2 className="section-title">📝 Últimos Movimientos</h2>
+                  <h2 className="section-title"><i className="fas fa-list"></i> Últimos Movimientos</h2>
                   <div className="table-container">
                     <table className="data-table">
                       <thead><tr><th>Fecha</th><th>Tipo</th><th className="text-right">Monto</th><th>Moneda</th><th className="text-right">Monto USD</th><th>Comentario</th></tr></thead>
@@ -225,7 +226,7 @@ export default function LiquidezPage() {
                         {movimientosLiquidez.map((mov) => (
                           <tr key={mov.id_mov_liq}>
                             <td>{new Date(mov.fecha).toLocaleDateString('es-AR')}</td>
-                            <td><span className={`badge ${mov.tipo_mov === "deposito" ? "success" : "danger"}`}>{mov.tipo_mov === "deposito" ? "➕ Depósito" : "➖ Extracción"}</span></td>
+                            <td><span className={`badge ${mov.tipo_mov === "deposito" ? "success" : "danger"}`}>{mov.tipo_mov === "deposito" ? <><i className="fas fa-plus-circle"></i> Depósito</> : <><i className="fas fa-minus-circle"></i> Extracción</>}</span></td>
                             <td className="text-right font-medium">${mov.monto.toFixed(2)}</td>
                             <td>{mov.moneda}</td>
                             <td className="text-right font-medium">${mov.monto_usd.toFixed(2)}</td>
@@ -239,7 +240,7 @@ export default function LiquidezPage() {
               )}
               {!loadingMovimientos && movimientosLiquidez.length === 0 && (
                 <div className="empty-state">
-                  <div className="empty-state-icon">📊</div>
+                  <div className="empty-state-icon"><i className="fas fa-chart-line" style={{ fontSize: '48px', color: '#9ca3af' }}></i></div>
                   <h3 className="empty-state-title">No hay movimientos registrados</h3>
                   <p className="empty-state-description">Crea un depósito para comenzar a gestionar la liquidez de {clienteActual?.name}</p>
                 </div>
@@ -249,7 +250,7 @@ export default function LiquidezPage() {
 
           {!loading.liquidez && !selectedClientId && (
             <div className="empty-state">
-              <div className="empty-state-icon">👤</div>
+              <div className="empty-state-icon"><i className="fas fa-user-circle" style={{ fontSize: '48px', color: '#9ca3af' }}></i></div>
               <h3 className="empty-state-title">Selecciona un cliente</h3>
               <p className="empty-state-description">Elige un cliente de la lista para ver su estado de liquidez</p>
             </div>

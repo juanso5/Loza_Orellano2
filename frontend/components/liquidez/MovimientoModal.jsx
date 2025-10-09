@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useState } from 'react';
-import { X, DollarSign, Calendar, MessageSquare } from 'lucide-react';
 
 export default function MovimientoModal({ 
   isOpen, 
@@ -147,7 +146,7 @@ export default function MovimientoModal({
               padding: '0.25rem'
             }}
           >
-            <X style={{ width: '24px', height: '24px' }} />
+            <i className="fas fa-times" style={{ fontSize: '20px' }} />
           </button>
         </div>
 
@@ -175,7 +174,7 @@ export default function MovimientoModal({
               color: '#374151',
               marginBottom: '0.5rem'
             }}>
-              <DollarSign style={{ display: 'inline', width: '16px', height: '16px', marginRight: '0.25rem' }} />
+              <i className="fas fa-dollar-sign" style={{ marginRight: '0.5rem', fontSize: '14px' }} />
               Monto *
             </label>
             <input
@@ -302,7 +301,7 @@ export default function MovimientoModal({
               color: '#374151',
               marginBottom: '0.5rem'
             }}>
-              <Calendar style={{ display: 'inline', width: '16px', height: '16px', marginRight: '0.25rem' }} />
+              <i className="fas fa-calendar" style={{ marginRight: '0.5rem', fontSize: '14px' }} />
               Fecha
             </label>
             <input
@@ -328,7 +327,7 @@ export default function MovimientoModal({
               color: '#374151',
               marginBottom: '0.5rem'
             }}>
-              <MessageSquare style={{ display: 'inline', width: '16px', height: '16px', marginRight: '0.25rem' }} />
+              <i className="fas fa-comment" style={{ marginRight: '0.5rem', fontSize: '14px' }} />
               Comentario (opcional)
             </label>
             <textarea

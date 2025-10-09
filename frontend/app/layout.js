@@ -5,6 +5,7 @@ import '../styles/home.css';
 import '../styles/sidebar.css';
 import '../styles/fondos.css';
 import '../styles/movimientos.css';
+import '../components/ui/ui-components.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { AppDataProvider } from '../components/AppDataProvider';
 

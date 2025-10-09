@@ -394,7 +394,7 @@ const AddPortfolioModal = ({ onClose, onSave, uid, existingNames = [], tipos = [
                   alignItems: "center"
                 }}>
                   <span>
-                    💰 Disponible: <strong style={{ color: "#10b981" }}>
+                    <i className="fas fa-wallet" style={{ marginRight: '0.5rem' }}></i> Disponible: <strong style={{ color: "#10b981" }}>
                       ${liquidezDisponible.toFixed(2)} USD
                     </strong>
                   </span>
@@ -417,7 +417,7 @@ const AddPortfolioModal = ({ onClose, onSave, uid, existingNames = [], tipos = [
                   fontSize: "0.75rem",
                   color: "#1e40af"
                 }}>
-                  💡 <strong>Tip:</strong> Puedes asignar liquidez ahora o después desde la página de Liquidez
+                  <i className="fas fa-lightbulb" style={{ marginRight: '0.5rem' }}></i> <strong>Tip:</strong> Puedes asignar liquidez ahora o después desde la página de Liquidez
                 </div>
               </div>
             )}
