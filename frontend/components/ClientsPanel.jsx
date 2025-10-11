@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMovements } from '../components/MovementsProvider';
 import ClientList from '../components/ClientList';
+import { fetchAllClientsWithData, filterClientsByQuery } from '@/lib/clientHelpers';
 
 export default function ClientsPanel({ onSelectClient }) {
   const { clientIdFilter, setClientIdFilter, tick } = useMovements();
@@ -15,36 +16,7 @@ export default function ClientsPanel({ onSelectClient }) {
     const load = async () => {
       setLoading(true);
       try {
-        // Cargar clientes
-        const resClientes = await fetch('/api/cliente', { cache: 'no-store' });
-        if (!resClientes.ok) throw new Error('Error cargando clientes');
-        const jsonClientes = await resClientes.json();
-        const list = Array.isArray(jsonClientes?.data) ? jsonClientes.data : [];
-        
-        // Cargar fondos y movimientos para cada cliente
-        const clientsWithData = await Promise.all(
-          list.map(async (c) => {
-            const clientId = Number(c.id ?? c.id_cliente ?? 0);
-            
-            // Cargar fondos del cliente
-            const resFondos = await fetch(`/api/fondo?cliente_id=${clientId}`, { cache: 'no-store' });
-            const jsonFondos = await resFondos.json();
-            const portfolios = Array.isArray(jsonFondos?.data) ? jsonFondos.data : [];
-            
-            // Cargar movimientos del cliente
-            const resMovs = await fetch(`/api/movimiento?cliente_id=${clientId}&limit=10000`, { cache: 'no-store' });
-            const jsonMovs = await resMovs.json();
-            const movements = Array.isArray(jsonMovs?.data) ? jsonMovs.data : [];
-            
-            return {
-              id: clientId,
-              name: c.name || c.nombre || '',
-              portfolios,
-              movements,
-            };
-          })
-        );
-        
+        const clientsWithData = await fetchAllClientsWithData();
         if (!ignore) setClients(clientsWithData);
       } catch (e) {
         console.error('Error cargando datos de clientes:', e);
@@ -58,9 +30,7 @@ export default function ClientsPanel({ onSelectClient }) {
   }, [tick]); // Recargar cuando cambien movimientos
 
   const filtered = useMemo(() => {
-    const s = (q || '').toLowerCase();
-    if (!s) return clients;
-    return clients.filter((c) => c.name.toLowerCase().includes(s));
+    return filterClientsByQuery(clients, q);
   }, [clients, q]);
 
   return (

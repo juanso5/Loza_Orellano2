@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const getSb = () => getSSRClient(); // async
 
 const SELECT_BASE =
-  "id_fondo,cliente_id,tipo_cartera:tipo_cartera_id(id_tipo_cartera,descripcion),plazo,tipo_plazo,fecha_alta,rend_esperado,deposito_inicial";
+  "id_fondo,cliente_id,tipo_cartera:tipo_cartera_id(id_tipo_cartera,descripcion,categoria,color,icono),plazo,tipo_plazo,fecha_alta,rend_esperado,deposito_inicial,metadata";
 
 function toYMD(v) {
   if (!v) return null;
@@ -39,6 +39,7 @@ function mapRow(r) {
     fechaAlta: fecha,
     rendEsperado: r.rend_esperado == null ? null : Number(r.rend_esperado),
     depositoInicial: r.deposito_inicial == null ? null : Number(r.deposito_inicial),
+    metadata: r.metadata || null,
   };
   if (r.tipo_cartera) out.tipo_cartera = r.tipo_cartera;
   return out;
@@ -46,6 +47,44 @@ function mapRow(r) {
 
 // Validaciones
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable();
+
+// Metadata schemas por estrategia
+const metadataJubilacionSchema = z.object({
+  estrategia: z.literal('jubilacion'),
+  edad_actual: z.coerce.number().int().min(18).max(100),
+  edad_objetivo: z.coerce.number().int().min(18).max(100),
+  aporte_mensual: z.coerce.number().nonnegative(),
+  fecha_objetivo: z.string().optional().nullable(),
+}).refine(data => data.edad_objetivo > data.edad_actual, {
+  message: "La edad objetivo debe ser mayor a la edad actual"
+});
+
+const metadataLargoPlazoSchema = z.object({
+  estrategia: z.literal('largo_plazo'),
+  permite_acciones: z.boolean().default(false),
+  descripcion: z.string().optional().nullable(),
+});
+
+const metadataViajesSchema = z.object({
+  estrategia: z.literal('viajes'),
+  monto_objetivo: z.coerce.number().positive(),
+  descripcion: z.string().min(1),
+});
+
+const metadataObjetivoSchema = z.object({
+  estrategia: z.literal('objetivo'),
+  fecha_objetivo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  monto_objetivo: z.coerce.number().positive(),
+  descripcion: z.string().min(1),
+});
+
+const metadataSchema = z.union([
+  metadataJubilacionSchema,
+  metadataLargoPlazoSchema,
+  metadataViajesSchema,
+  metadataObjetivoSchema,
+]).optional().nullable();
+
 const createSchema = z.object({
   cliente_id: z.coerce.number().int().positive(),
   tipo_cartera_id: z.coerce.number().int().positive(),
@@ -53,8 +92,8 @@ const createSchema = z.object({
   plazo: z.coerce.number().int().positive().optional().nullable(),
   tipo_plazo: z.string().optional().nullable(),
   rend_esperado: z.coerce.number().optional().nullable(),
-  // Liquidez inicial a asignar (opcional)
   liquidez_inicial: z.coerce.number().nonnegative().optional().default(0),
+  metadata: metadataSchema,
 });
 
 const updateSchema = z.object({
@@ -66,6 +105,7 @@ const updateSchema = z.object({
   fecha_alta: ymd,
   rend_esperado: z.coerce.number().optional().nullable(),
   deposito_inicial: z.coerce.number().optional().nullable(),
+  metadata: metadataSchema,
 });
 const deleteSchema = z.object({ id: z.coerce.number().int().positive() });
 
@@ -129,7 +169,8 @@ export async function POST(req) {
       plazo,
       tipo_plazo,
       rend_esperado,
-      liquidez_inicial
+      liquidez_inicial,
+      metadata
     } = parsed.data;
 
     // Si hay liquidez_inicial, validar primero
@@ -163,6 +204,7 @@ export async function POST(req) {
       tipo_plazo,
       rend_esperado: rend_esperado ? parseFloat(rend_esperado) : null,
       fecha_alta: new Date().toISOString(),
+      metadata: metadata || null,
     };
 
     const { data: fondoData, error: fondoError } = await sb

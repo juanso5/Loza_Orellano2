@@ -164,6 +164,15 @@ export default function ClientesPage() {
       });
       if (!res.ok && res.status !== 204) {
         const out = await res.json().catch(() => null);
+        
+        // Mensaje específico para foreign key constraint
+        if (out?.error?.includes('foreign key') || out?.error?.includes('still referenced')) {
+          throw new Error(
+            `No se puede eliminar el cliente "${pendingDelete.name}" porque tiene movimientos o datos asociados. ` +
+            `Por favor, elimine primero sus movimientos de liquidez, fondos y carteras.`
+          );
+        }
+        
         throw new Error(out?.error || "Error al eliminar cliente");
       }
       setClients((prev) => prev.filter((x) => x.id !== pendingDelete.id));
@@ -171,6 +180,8 @@ export default function ClientesPage() {
       setPendingDelete(null);
     } catch (e) {
       console.error(e);
+      setShowConfirm(false);
+      setPendingDelete(null);
       alert(e.message || "No se pudo eliminar el cliente");
     }
   }, [pendingDelete]);

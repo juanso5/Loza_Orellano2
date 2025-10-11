@@ -196,6 +196,31 @@ export function MovementsProvider({ children }) {
 
 export const useMovements = () => {
   const ctx = useContext(MovementsCtx);
-  if (!ctx) throw new Error('useMovements debe usarse dentro de MovementsProvider');
+  if (!ctx) {
+    console.warn('⚠️ useMovements usado fuera de MovementsProvider - devolviendo valores por defecto');
+    // Devolver valores por defecto seguros
+    return {
+      items: [],
+      filteredItems: [],
+      loading: false,
+      error: '',
+      hasMore: false,
+      page: 0,
+      query: '',
+      setQuery: () => {},
+      clientIdFilter: null,
+      setClientIdFilter: () => {},
+      uploadState: { status: 'idle', message: '' },
+      setUploadState: () => {},
+      fetchNextPage: () => {},
+      fetchFirstPage: () => {},
+      refreshFirstPage: () => {},
+      deleteMovement: () => {},
+      pricesMap: {},
+      refreshPrices: () => {},
+      tick: 0,
+      normalizeSimple: (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
+    };
+  }
   return ctx;
 };

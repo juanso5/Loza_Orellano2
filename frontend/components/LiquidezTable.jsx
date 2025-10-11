@@ -1,7 +1,15 @@
-﻿// components/LiquidezTable.jsx
+﻿// components/  const [sortField, setSortField] = useState('fecha');
+  const [sortDirection, setSortDirection] = useState('desc');
+
+  // Formatters
+  const fmtUSD = formatCurrency('USD');
+  const fmtARS = formatCurrency('ARS');
+
+  // Formatear fechasx
 'use client';
 
 import { useState, useMemo } from 'react';
+import { formatCurrency } from '@/lib/utils/formatters';
 
 export default function LiquidezTable({ 
   movements = [], 
@@ -129,13 +137,13 @@ export default function LiquidezTable({
         <div className="total-item">
           <span className="label">Total USD:</span>
           <span className={`amount ${totals.usd >= 0 ? 'positive' : 'negative'}`}>
-            {formatCurrency(totals.usd, 'USD')}
+            {fmtUSD(totals.usd)}
           </span>
         </div>
         <div className="total-item">
           <span className="label">Total ARS:</span>
           <span className={`amount ${totals.ars >= 0 ? 'positive' : 'negative'}`}>
-            {formatCurrency(totals.ars, 'ARS')}
+            {fmtARS(totals.ars)}
           </span>
         </div>
         <div className="total-item">
@@ -188,7 +196,8 @@ export default function LiquidezTable({
                   </td>
                   <td className="amount-cell">
                     <span className={`amount ${movement.tipo_mov === 'deposito' ? 'deposit' : 'withdrawal'}`}>
-                      {movement.tipo_mov === 'extraccion' ? '-' : '+'}{formatCurrency(movement.monto, movement.tipo_cambio)}
+                      {movement.tipo_mov === 'extraccion' ? '-' : '+'}
+                      {movement.tipo_cambio === 'usd' ? fmtUSD(movement.monto) : fmtARS(movement.monto)}
                     </span>
                   </td>
                   <td className="comment-cell">

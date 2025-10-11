@@ -30,6 +30,10 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
   const [precioUsd, setPrecioUsd] = useState('');
 
   const [loading, setLoading] = useState(false);
+  
+  // 💰 Estado de liquidez del fondo seleccionado
+  const [liquidezDisponible, setLiquidezDisponible] = useState(null);
+  const [loadingLiquidez, setLoadingLiquidez] = useState(false);
 
   // Resetear formulario cuando se abre
   useEffect(() => {
@@ -123,6 +127,45 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     return () => { ignore = true; };
   }, [open, clienteId]);
 
+  // 💰 Cargar liquidez disponible del fondo seleccionado
+  useEffect(() => {
+    if (!open || !clienteId || !fondoId) {
+      setLiquidezDisponible(null);
+      return;
+    }
+    let ignore = false;
+    setLoadingLiquidez(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/liquidez/estado?cliente_id=${clienteId}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        const j = await res.json();
+        const estado = j?.data || {};
+        
+        // Buscar el fondo específico en el array 'fondos'
+        const fondosArray = Array.isArray(estado.fondos) ? estado.fondos : [];
+        const fondoInfo = fondosArray.find(f => Number(f.id_fondo) === Number(fondoId));
+        
+        if (!ignore) {
+          if (fondoInfo) {
+            // El campo es 'saldoDisponible' (camelCase)
+            setLiquidezDisponible(parseFloat(fondoInfo.saldoDisponible || 0));
+          } else {
+            setLiquidezDisponible(0);
+          }
+          setLoadingLiquidez(false);
+        }
+      } catch (err) {
+        console.error('Error cargando liquidez del fondo:', err);
+        if (!ignore) {
+          setLiquidezDisponible(null);
+          setLoadingLiquidez(false);
+        }
+      }
+    })();
+    return () => { ignore = true; };
+  }, [open, clienteId, fondoId]);
+
   // Movimientos del cliente para calcular disponibles por cartera/especie
   const [availableByKey, setAvailableByKey] = useState(new Map());
   useEffect(() => {
@@ -187,6 +230,26 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
       alert('Debe seleccionar o ingresar una especie');
       return;
     }
+    
+    // Validación: precio obligatorio para compras (Ingreso)
+    if (tipo === 'Ingreso') {
+      const precio = parseFloat(precioUsd);
+      if (!precioUsd || isNaN(precio) || precio <= 0) {
+        alert('Para una compra (Ingreso) el Precio USD es obligatorio y debe ser mayor a 0');
+        return;
+      }
+      
+      // Advertencia si el costo supera la liquidez disponible
+      if (liquidezDisponible !== null) {
+        const costoCompra = precio * Number(nominal);
+        if (costoCompra > liquidezDisponible) {
+          if (!confirm(`El costo de la compra ($${costoCompra.toFixed(2)} USD) supera la liquidez disponible ($${liquidezDisponible.toFixed(2)} USD). El servidor rechazará esta operación. ¿Intentar de todas formas?`)) {
+            return;
+          }
+        }
+      }
+    }
+    
     if (tipo === 'Egreso' && availableHint !== null && Number(nominal) > availableHint) {
       if (!confirm(`El nominal (${nominal}) supera el disponible (${availableHint}). ¿Continuar?`)) return;
     }
@@ -266,6 +329,40 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
             </label>
           </div>
 
+          {/* 💰 Mostrar liquidez disponible */}
+          {fondoId && (
+            <div style={{ 
+              padding: '12px 16px', 
+              backgroundColor: tipo === 'Ingreso' ? '#e3f2fd' : '#f3e5f5',
+              borderLeft: `4px solid ${tipo === 'Ingreso' ? '#2196f3' : '#9c27b0'}`,
+              borderRadius: 4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <i className="fas fa-wallet" style={{ color: tipo === 'Ingreso' ? '#1976d2' : '#7b1fa2' }}></i>
+              {loadingLiquidez ? (
+                <small style={{ color: '#666' }}>Cargando liquidez...</small>
+              ) : liquidezDisponible !== null ? (
+                <div style={{ flex: 1 }}>
+                  <strong>Liquidez disponible: ${liquidezDisponible.toFixed(2)} USD</strong>
+                  {tipo === 'Ingreso' && (
+                    <small style={{ display: 'block', marginTop: 4, color: '#555' }}>
+                      Al comprar se descontará de esta liquidez
+                    </small>
+                  )}
+                  {tipo === 'Egreso' && (
+                    <small style={{ display: 'block', marginTop: 4, color: '#555' }}>
+                      Al vender se sumará a esta liquidez
+                    </small>
+                  )}
+                </div>
+              ) : (
+                <small style={{ color: '#999' }}>No se pudo cargar liquidez</small>
+              )}
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span>Tipo</span>
@@ -309,8 +406,21 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               )}
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span>Precio USD (opcional)</span>
-              <input type="number" value={precioUsd} onChange={(e) => setPrecioUsd(e.target.value)} step="0.01" min="0" placeholder="0.00" />
+              <span>Precio USD {tipo === 'Ingreso' && <span style={{ color: '#d32f2f' }}>*</span>}</span>
+              <input 
+                type="number" 
+                value={precioUsd} 
+                onChange={(e) => setPrecioUsd(e.target.value)} 
+                step="0.01" 
+                min="0.01" 
+                placeholder="0.00"
+                required={tipo === 'Ingreso'}
+              />
+              {tipo === 'Ingreso' && (
+                <small style={{ color: '#666' }}>
+                  Requerido para validar liquidez
+                </small>
+              )}
             </label>
           </div>
 

@@ -321,9 +321,24 @@ export async function POST(req) {
       especie,
     } = parsed.data;
 
-    // ­ƒåò VALIDAR LIQUIDEZ DEL FONDO PARA COMPRAS
+    // 🔥 VALIDAR LIQUIDEZ DEL FONDO PARA COMPRAS
     if (tipo_mov === "compra") {
-      const costoCompra = parseFloat(precio_usd) * parseInt(nominal);
+      // Validar que precio_usd sea válido
+      const precioNum = parseFloat(precio_usd);
+      if (!precio_usd || isNaN(precioNum) || precioNum <= 0) {
+        return NextResponse.json({
+          error: "Para una compra se requiere un precio_usd válido y mayor a 0"
+        }, { status: 400 });
+      }
+
+      const nominalNum = parseInt(nominal);
+      if (isNaN(nominalNum) || nominalNum <= 0) {
+        return NextResponse.json({
+          error: "El nominal debe ser un número válido y mayor a 0"
+        }, { status: 400 });
+      }
+
+      const costoCompra = precioNum * nominalNum;
       
       // Importar helper
       const { validarSaldoParaCompra } = await import("../../../lib/fondoHelpers");
@@ -405,42 +420,94 @@ export async function POST(req) {
 
     if (error) throw error;
 
-    // ­ƒåò AJUSTE AUTOM├üTICO DE LIQUIDEZ DEL FONDO
-    const montoMovimiento = parseFloat(precio_usd) * parseInt(nominal);
-    
-    // Para COMPRA: descontar liquidez del fondo (desasignaci├│n)
-    // Para VENTA: sumar liquidez al fondo (asignaci├│n)
-    const tipoOperacion = tipo_mov === "compra" ? "desasignacion" : "asignacion";
-    const comentarioAuto = tipo_mov === "compra" 
-      ? `Compra autom├ítica: ${nominal} ${data.tipo_especie?.nombre || 'especies'} @ $${precio_usd}`
-      : `Venta autom├ítica: ${nominal} ${data.tipo_especie?.nombre || 'especies'} @ $${precio_usd}`;
-
-    const asignacionPayload = {
-      cliente_id: Number(cliente_id),
-      fondo_id: Number(fondo_id),
-      fecha: new Date().toISOString(),
-      tipo_operacion: tipoOperacion,
-      monto_usd: montoMovimiento,
-      comentario: comentarioAuto,
+    // 🔥 INTEGRACIÓN AUTOMÁTICA CON LIQUIDEZ
+    const precioNum = parseFloat(precio_usd);
+    const nominalNum = parseInt(nominal);
+    const tienePrecioValido = precio_usd && !isNaN(precioNum) && precioNum > 0;
+    const montoMovimiento = tienePrecioValido ? precioNum * nominalNum : 0;
+    const especieNombre = data.tipo_especie?.nombre || 'especie';
+    const resultado = {
+      data: mapRow(data),
+      liquidezAjustada: false,
+      movLiquidezCreado: false,
     };
 
-    const { error: asignError } = await sb
-      .from("asignacion_liquidez")
-      .insert(asignacionPayload);
+    try {
+      if (tipo_mov === "compra") {
+        // COMPRA: Descontar liquidez del fondo
+        const comentarioCompra = `Compra automática: ${nominal} ${especieNombre} @ $${precio_usd}`;
+        
+        const { error: asignError } = await sb
+          .from("asignacion_liquidez")
+          .insert({
+            cliente_id: Number(cliente_id),
+            fondo_id: Number(fondo_id),
+            fecha: new Date().toISOString(),
+            tipo_operacion: "desasignacion",
+            monto_usd: montoMovimiento,
+            comentario: comentarioCompra,
+          });
 
-    if (asignError) {
-      console.error("Error ajustando liquidez autom├íticamente:", asignError);
-      // No lanzar error para no bloquear el movimiento, pero loguear
+        if (asignError) {
+          console.error("⚠️ Error descontando liquidez del fondo:", asignError);
+        } else {
+          resultado.liquidezAjustada = true;
+        }
+
+      } else if (tipo_mov === "venta") {
+        // VENTA: Crear mov_liquidez (depósito) + Asignar al fondo
+        // Solo si hay precio válido
+        if (tienePrecioValido && montoMovimiento > 0) {
+          const comentarioVenta = `Recupero por venta de ${nominal} ${especieNombre} @ $${precio_usd}`;
+
+          // 1. Crear movimiento de liquidez (depósito)
+          const { data: movLiq, error: movLiqError } = await sb
+            .from("mov_liquidez")
+            .insert({
+              cliente_id: Number(cliente_id),
+              tipo_mov: "deposito",
+              monto: montoMovimiento,
+              moneda: "USD",
+              tipo_cambio_usado: 1.0,
+              fecha: new Date().toISOString(),
+              comentario: comentarioVenta,
+            })
+            .select()
+            .single();
+
+          if (movLiqError) {
+            console.error("⚠️ Error creando mov_liquidez:", movLiqError);
+          } else {
+            resultado.movLiquidezCreado = true;
+            
+            // 2. Asignar liquidez automáticamente al fondo
+            const { error: asignError } = await sb
+              .from("asignacion_liquidez")
+              .insert({
+                cliente_id: Number(cliente_id),
+                fondo_id: Number(fondo_id),
+                fecha: new Date().toISOString(),
+                tipo_operacion: "asignacion",
+                monto_usd: montoMovimiento,
+                comentario: `Asignación automática: ${comentarioVenta}`,
+              });
+
+            if (asignError) {
+              console.error("⚠️ Error asignando liquidez al fondo:", asignError);
+            } else {
+              resultado.liquidezAjustada = true;
+            }
+          }
+        } else {
+          console.log("ℹ️ Venta sin precio válido, no se crea mov_liquidez");
+        }
+      }
+    } catch (liquidezError) {
+      console.error("⚠️ Error en integración de liquidez:", liquidezError);
+      // No lanzar error para no bloquear el movimiento
     }
 
-    return NextResponse.json({ 
-      data: mapRow(data),
-      liquidezAjustada: !asignError,
-      ajuste: {
-        tipo: tipoOperacion,
-        monto: montoMovimiento
-      }
-    }, { status: 201 });
+    return NextResponse.json(resultado, { status: 201 });
   } catch (e) {
     console.error("POST /api/movimiento error:", e);
     return NextResponse.json({ error: e?.message || "Error al crear movimiento" }, { status: 500 });
