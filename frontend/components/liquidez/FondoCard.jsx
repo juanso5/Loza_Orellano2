@@ -93,7 +93,7 @@ export default function FondoCard({ fondo, onAsignar }) {
           </div>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem', margin: 0 }}>
-              En Acciones
+              Invertido
             </p>
             <p style={{ fontSize: '1.125rem', fontWeight: '700', color: '#8b5cf6', margin: '0.25rem 0 0 0' }}>
               ${dineroEnAcciones.toFixed(2)}
@@ -118,7 +118,7 @@ export default function FondoCard({ fondo, onAsignar }) {
             color: '#4b5563', 
             marginBottom: '0.25rem' 
           }}>
-            <span>Utilizaci├│n</span>
+            <span>Utilizacion</span>
             <span style={{ fontWeight: '600' }}>{porcentajeInvertido}%</span>
           </div>
           <div style={{ 
@@ -177,7 +177,7 @@ export default function FondoCard({ fondo, onAsignar }) {
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
           >
-            {expanded ? 'Menos' : 'M├ís'}
+            {expanded ? 'Menos' : 'Más'}
           </button>
         </div>
 

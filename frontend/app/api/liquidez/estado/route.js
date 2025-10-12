@@ -71,51 +71,53 @@ export async function GET(req) {
       );
     }
 
-    // 3. Obtener estado de cada fondo desde la vista
-    const fondosConEstado = await Promise.all(
-      (fondos || []).map(async (fondo) => {
-        const { data: estadoFondo, error: errorFondo } = await sb
-          .from("v_estado_fondo")
-          .select("liquidez_asignada, dinero_invertido, dinero_recuperado, saldo_disponible")
-          .eq("cliente_id", clienteId)
-          .eq("id_fondo", fondo.id_fondo)
-          .single();
+    // 3. Obtener estado de TODOS los fondos en una sola query
+    const { data: estadosFondo, error: errorEstados } = await sb
+      .from("v_estado_fondo")
+      .select("id_fondo, liquidez_asignada, dinero_invertido, dinero_recuperado, saldo_disponible")
+      .eq("cliente_id", clienteId);
 
-        // Si no hay datos, el fondo no tiene asignaciones aún
-        const estadoFinal =
-          errorFondo?.code === "PGRST116"
-            ? {
-                liquidez_asignada: 0,
-                dinero_invertido: 0,
-                dinero_recuperado: 0,
-                saldo_disponible: 0,
-              }
-            : estadoFondo;
+    if (errorEstados) {
+      console.error("Error obteniendo estados de fondos:", errorEstados);
+    }
 
-        const liquidezAsignada = parseFloat(estadoFinal?.liquidez_asignada || 0);
-        const dineroInvertido = parseFloat(estadoFinal?.dinero_invertido || 0);
-
-        return {
-          id_fondo: fondo.id_fondo,
-          tipo_cartera_id: fondo.tipo_cartera_id,
-          tipo_cartera: fondo.tipo_cartera?.descripcion || "N/A",
-          plazo: fondo.plazo,
-          tipo_plazo: fondo.tipo_plazo,
-          rend_esperado: fondo.rend_esperado,
-          deposito_inicial: fondo.deposito_inicial,
-          fecha_alta: fondo.fecha_alta,
-          liquidezAsignada: liquidezAsignada,
-          dineroInvertido: dineroInvertido,
-          dineroRecuperado: parseFloat(estadoFinal?.dinero_recuperado || 0),
-          saldoDisponible: parseFloat(estadoFinal?.saldo_disponible || 0),
-          puedeComprar: parseFloat(estadoFinal?.saldo_disponible || 0) > 0,
-          porcentajeInvertido:
-            liquidezAsignada > 0
-              ? parseFloat(((dineroInvertido / liquidezAsignada) * 100).toFixed(2))
-              : 0,
-        };
-      })
+    // Crear un Map para lookup rápido
+    const estadosMap = new Map(
+      (estadosFondo || []).map(ef => [Number(ef.id_fondo), ef])
     );
+
+    // Mapear fondos con su estado
+    const fondosConEstado = (fondos || []).map((fondo) => {
+      const estadoFondo = estadosMap.get(Number(fondo.id_fondo)) || {
+        liquidez_asignada: 0,
+        dinero_invertido: 0,
+        dinero_recuperado: 0,
+        saldo_disponible: 0,
+      };
+
+      const liquidezAsignada = parseFloat(estadoFondo.liquidez_asignada || 0);
+      const dineroInvertido = parseFloat(estadoFondo.dinero_invertido || 0);
+
+      return {
+        id_fondo: fondo.id_fondo,
+        tipo_cartera_id: fondo.tipo_cartera_id,
+        tipo_cartera: fondo.tipo_cartera?.descripcion || "N/A",
+        plazo: fondo.plazo,
+        tipo_plazo: fondo.tipo_plazo,
+        rend_esperado: fondo.rend_esperado,
+        deposito_inicial: fondo.deposito_inicial,
+        fecha_alta: fondo.fecha_alta,
+        liquidezAsignada: liquidezAsignada,
+        dineroInvertido: dineroInvertido,
+        dineroRecuperado: parseFloat(estadoFondo.dinero_recuperado || 0),
+        saldoDisponible: parseFloat(estadoFondo.saldo_disponible || 0),
+        puedeComprar: parseFloat(estadoFondo.saldo_disponible || 0) > 0,
+        porcentajeInvertido:
+          liquidezAsignada > 0
+            ? parseFloat(((dineroInvertido / liquidezAsignada) * 100).toFixed(2))
+            : 0,
+      };
+    });
 
     return NextResponse.json({
       success: true,

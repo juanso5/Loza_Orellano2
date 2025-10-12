@@ -103,6 +103,8 @@ const FondosPage = () => {
               fechaAlta: fechaAlta,
               rendEsperado: f?.rendEsperado ?? null,
               depositoInicial: f?.depositoInicial ?? null,
+              metadata: f?.metadata ?? null,
+              tipo_cartera: f?.tipo_cartera ?? null,
             },
           };
         });
@@ -140,10 +142,26 @@ const FondosPage = () => {
 
         const portfoliosWithFunds = aggregateFundsByPortfolio(portfolios, movements);
 
+        // Cargar liquidez por fondo
+        let portfoliosConLiquidez = portfoliosWithFunds;
+        try {
+          const rliq = await fetch(`/api/liquidez/estado?cliente_id=${selectedClientId}`, { cache: 'no-store' });
+          const jliq = await rliq.json();
+          if (jliq.success && Array.isArray(jliq.data?.fondos)) {
+            const liquidezMap = new Map(jliq.data.fondos.map(f => [Number(f.id_fondo), f]));
+            portfoliosConLiquidez = portfoliosWithFunds.map(p => ({
+              ...p,
+              liquidez: liquidezMap.get(Number(p.id)) || null
+            }));
+          }
+        } catch (e) {
+          console.warn("Liquidez no disponible:", e);
+        }
+
         setClients((prev) =>
           prev.map((c) =>
             c.id === selectedClientId
-              ? { ...c, portfolios: portfoliosWithFunds, movements }
+              ? { ...c, portfolios: portfoliosConLiquidez, movements }
               : c
           )
         );
@@ -165,32 +183,29 @@ const FondosPage = () => {
     async (newPortfolio) => {
       if (!selectedClientId) return;
       try {
-        const name =
-          newPortfolio?.name ??
-          newPortfolio?.tipo_cartera ??
-          newPortfolio?.descripcion ??
-          newPortfolio?.title ??
-          "Nueva cartera";
+        // Usar el payload completo que viene del modal (FASE 2)
+        const payload = {
+          ...newPortfolio,
+          cliente_id: selectedClientId, // Asegurar que tenga el cliente correcto
+        };
 
-        const periodMonths =
-          newPortfolio?.periodMonths != null
-            ? Number(newPortfolio.periodMonths)
-            : newPortfolio?.plazo != null
-            ? Number(newPortfolio.plazo)
-            : null;
+        console.log('handleAddPortfolio - Enviando payload:', payload);
 
         const res = await fetch("/api/fondo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cliente_id: selectedClientId,
-            name,
-            periodMonths,
-          }),
+          body: JSON.stringify(payload),
         });
+        
         if (!res.ok) {
           const te = await res.text();
           console.error("Error creando cartera:", te);
+          throw new Error(te);
+        }
+        
+        const result = await res.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Error desconocido');
         }
 
         // Refrescar carteras y movimientos; y recomputar fondos + progreso
@@ -222,6 +237,8 @@ const FondosPage = () => {
               fechaAlta: fechaAlta,
               rendEsperado: f?.rendEsperado ?? null,
               depositoInicial: f?.depositoInicial ?? null,
+              metadata: f?.metadata ?? null,
+              tipo_cartera: f?.tipo_cartera ?? null,
             },
           };
         });
@@ -318,6 +335,8 @@ const FondosPage = () => {
               fechaAlta: fechaAlta,
               rendEsperado: f?.rendEsperado ?? null,
               depositoInicial: f?.depositoInicial ?? null,
+              metadata: f?.metadata ?? null,
+              tipo_cartera: f?.tipo_cartera ?? null,
             },
           };
         });
@@ -388,6 +407,8 @@ const FondosPage = () => {
               fechaAlta: fechaAlta,
               rendEsperado: f?.rendEsperado ?? null,
               depositoInicial: f?.depositoInicial ?? null,
+              metadata: f?.metadata ?? null,
+              tipo_cartera: f?.tipo_cartera ?? null,
             },
           };
         });
@@ -623,11 +644,7 @@ const FondosPage = () => {
         <AddPortfolioModal
           onClose={() => setIsAddPortfolioOpen(false)}
           onSave={handleAddPortfolio}
-          uid={(p = "id") =>
-            `${p}-${Date.now().toString(36)}-${Math.floor(
-              Math.random() * 9000 + 1000
-            )}`
-          }
+          clienteId={selectedClientId}
         />
       )}
 

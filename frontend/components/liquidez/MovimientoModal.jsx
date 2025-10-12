@@ -134,7 +134,7 @@ export default function MovimientoModal({
             fontWeight: 'bold',
             color: tipo === 'deposito' ? '#15803d' : '#b91c1c'
           }}>
-            {tipo === 'deposito' ? 'Ô×ò Registrar Dep├│sito' : 'Ô×û Registrar Extracci├│n'}
+            {tipo === 'deposito' ? 'Registrar Depósito' : 'Registrar Extracción'}
           </h2>
           <button
             onClick={onClose}
@@ -219,7 +219,7 @@ export default function MovimientoModal({
                   cursor: 'pointer'
                 }}
               >
-                USD ­ƒç║­ƒç©
+                USD
               </button>
               <button
                 type="button"
@@ -234,7 +234,7 @@ export default function MovimientoModal({
                   cursor: 'pointer'
                 }}
               >
-                ARS ­ƒçª­ƒçÀ
+                ARS
               </button>
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function MovimientoModal({
                 placeholder="1500.00"
               />
               <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                ­ƒÆí Ingresa el tipo de cambio del d├¡a
+                Ingresa el tipo de cambio del día
               </p>
             </div>
           )}

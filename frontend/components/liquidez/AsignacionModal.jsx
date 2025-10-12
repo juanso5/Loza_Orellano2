@@ -61,10 +61,10 @@ export default function AsignacionModal({
       const data = await resp.json();
 
       if (!resp.ok || !data.success) {
-        throw new Error(data.error || "Error al procesar la asignaci├│n");
+        throw new Error(data.error || "Error al procesar la asignación");
       }
 
-      setSuccess("Asignaci├│n realizada correctamente");
+      setSuccess("Asignación realizada correctamente");
       setTimeout(() => {
         onSave();
         onClose();
@@ -99,12 +99,12 @@ export default function AsignacionModal({
     if (formData.moneda === "USD") {
       return {
         principal: `USD ${monto.toFixed(2)}`,
-        equivalente: `Ôëê ARS ${(monto * tc).toFixed(2)}`
+        equivalente: `ARS ${(monto * tc).toFixed(2)}`
       };
     } else {
       return {
         principal: `ARS ${monto.toFixed(2)}`,
-        equivalente: `Ôëê USD ${montoUSD.toFixed(2)}`
+        equivalente: `USD ${montoUSD.toFixed(2)}`
       };
     }
   };
@@ -183,19 +183,19 @@ export default function AsignacionModal({
             }}
           >
             <p style={{ margin: 0, fontSize: "0.875rem", color: excedeDisponible ? "#991b1b" : "#1e40af", fontWeight: "600" }}>
-              ­ƒÆ░ Liquidez Disponible
+              Liquidez Disponible
             </p>
             <div style={{ display: "flex", gap: "1rem", alignItems: "baseline", marginTop: "0.5rem" }}>
               <p style={{ margin: 0, fontSize: "1.5rem", fontWeight: "700", color: excedeDisponible ? "#dc2626" : "#1d4ed8" }}>
                 USD ${liquidezDisponible.toFixed(2)}
               </p>
               <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7280" }}>
-                | ARS ${(liquidezDisponible * parseFloat(formData.tipo_cambio_usado || "1500")).toFixed(2)} <span style={{ fontSize: "0.75rem" }}>(hist├│rico)</span>
+                | ARS ${(liquidezDisponible * parseFloat(formData.tipo_cambio_usado || "1500")).toFixed(2)} <span style={{ fontSize: "0.75rem" }}>(histórico)</span>
               </p>
             </div>
             {excedeDisponible && (
               <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem", color: "#991b1b" }}>
-                ÔÜá´©Å El monto ingresado excede la liquidez disponible
+                El monto ingresado excede la liquidez disponible
               </p>
             )}
           </div>
@@ -206,7 +206,7 @@ export default function AsignacionModal({
           {/* Tipo de operaci├│n */}
           <div style={{ marginBottom: "1rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
-              Tipo de Operaci├│n
+              Tipo de Operación
             </label>
             <select
               name="tipo_operacion"
@@ -220,15 +220,15 @@ export default function AsignacionModal({
                 fontSize: "0.875rem"
               }}
             >
-              <option value="asignacion">Asignaci├│n</option>
-              <option value="desasignacion">Desasignaci├│n</option>
+              <option value="asignacion">Asignación</option>
+              <option value="desasignacion">Desasignación</option>
             </select>
           </div>
 
           {/* Monto */}
           <div style={{ marginBottom: "1rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
-              ­ƒÆÁ Monto *
+              Monto *
             </label>
             <input
               type="number"
@@ -269,7 +269,7 @@ export default function AsignacionModal({
                   fontSize: "0.875rem"
                 }}
               >
-                USD ­ƒç║­ƒç©
+                USD
               </button>
               <button
                 type="button"
@@ -285,7 +285,7 @@ export default function AsignacionModal({
                   fontSize: "0.875rem"
                 }}
               >
-                ARS ­ƒçª­ƒçÀ
+                ARS
               </button>
             </div>
           </div>
@@ -314,7 +314,7 @@ export default function AsignacionModal({
                 placeholder="1500.00"
               />
               <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem", margin: "0.25rem 0 0 0" }}>
-                ­ƒÆí Tipo de cambio del d├¡a
+                Tipo de cambio del día
               </p>
             </div>
           )}
@@ -343,7 +343,7 @@ export default function AsignacionModal({
           {/* Comentario */}
           <div style={{ marginBottom: "1rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
-              ­ƒÆ¼ Comentario (opcional)
+              ­Comentario (opcional)
             </label>
             <textarea
               name="comentario"

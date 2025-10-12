@@ -36,7 +36,7 @@ const ClientDetail = ({ client, onAddPortfolio, onDeleteMovement, onOpenPortfoli
         <h3 className="section-title" style={{ margin: '18px 0 8px 0' }}>Carteras</h3>
         <div className="portfolio-actions" style={{ margin: '18px 0 8px 0' }}>
           <button className="btn-add alt" onClick={onAddPortfolio}>
-            <i className="fas fa-folder-plus"></i> Agregar Cartera
+            <i className="fas fa-folder-plus"></i> Agregar Fondo
           </button>
         </div>
       </div>
@@ -47,13 +47,52 @@ const ClientDetail = ({ client, onAddPortfolio, onDeleteMovement, onOpenPortfoli
           const percent = totalClient > 0 ? (totalNom / totalClient * 100) : 0;
           const monthly = weighted(p.funds, 'monthlyReturn');
           const totalReturn = weighted(p.funds, 'totalReturn');
+          
+          // Metadata de la cartera
+          const metadata = p.meta?.metadata;
+          const categoria = p.meta?.tipo_cartera?.categoria;
+          const color = p.meta?.tipo_cartera?.color || '#8b5cf6';
+          const icono = p.meta?.tipo_cartera?.icono || 'fas fa-chart-line';
 
           return (
-            <div key={p.id} className="cartera-card" onClick={() => onOpenPortfolioDetail(p.id)}>
+            <div 
+              key={p.id} 
+              className="cartera-card" 
+              onClick={() => onOpenPortfolioDetail(p.id)}
+              style={{ borderLeft: `4px solid ${color}` }}
+            >
               <div className="cartera-top">
                 <div>
-                  <div className="cartera-name">{p.name}</div>
-                  <div className="muted">Periodo objetivo: <strong>{p.periodMonths}</strong> meses</div>
+                  <div className="cartera-name">
+                    <i className={icono} style={{ marginRight: 8 }}></i>
+                    {p.name}
+                  </div>
+                  
+                  {/* Metadata específica por estrategia */}
+                  {metadata && categoria === 'jubilacion' && (
+                    <div className="muted" style={{ fontSize: '0.85rem' }}>
+                      🎯 Objetivo: {metadata.edad_objetivo} años | Aporte: ${Number(metadata.aporte_mensual || 0).toFixed(0)}/mes
+                    </div>
+                  )}
+                  {metadata && categoria === 'largo_plazo' && (
+                    <div className="muted" style={{ fontSize: '0.85rem' }}>
+                      📈 Largo plazo {metadata.permite_acciones && '| Acciones permitidas'}
+                      {metadata.descripcion && ` | ${metadata.descripcion}`}
+                    </div>
+                  )}
+                  {metadata && categoria === 'Viajes' && (
+                    <div className="muted" style={{ fontSize: '0.85rem' }}>
+                      ✈️ Meta: ${Number(metadata.monto_objetivo || 0).toLocaleString('es-AR')} | {metadata.descripcion}
+                    </div>
+                  )}
+                  {metadata && categoria === 'objetivo' && (
+                    <div className="muted" style={{ fontSize: '0.85rem' }}>
+                      🎯 ${Number(metadata.monto_objetivo || 0).toLocaleString('es-AR')} - {metadata.descripcion} | {fmtDate(metadata.fecha_objetivo)}
+                    </div>
+                  )}
+                  {!metadata && (
+                    <div className="muted">Periodo objetivo: <strong>{p.periodMonths}</strong> meses</div>
+                  )}
                 </div>
                 <div className="cartera-percent">{percent.toFixed(1)}%</div>
               </div>
@@ -62,10 +101,27 @@ const ClientDetail = ({ client, onAddPortfolio, onDeleteMovement, onOpenPortfoli
                 <div className="item"><div className="muted">Rend. total</div><div className="value">{(totalReturn * 100).toFixed(2)}%</div></div>
                 <div className="item"><div className="muted">Nominal</div><div className="value">{formatNumber(totalNom)}</div></div>
               </div>
+              
+              {/* Liquidez */}
+              {p.liquidez && (
+                <div style={{ marginTop: 8, padding: '8px 12px', backgroundColor: '#f0fdf4', borderRadius: 6, border: '1px solid #86efac' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+                    <span className="muted">💰 Liquidez:</span>
+                    <span style={{ fontWeight: 600, color: '#15803d' }}>
+                      ${p.liquidez.saldoDisponible?.toFixed(2) || '0.00'} USD
+                    </span>
+                  </div>
+                  {p.liquidez.liquidezAsignada > 0 && (
+                    <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: 4 }}>
+                      Asignada: ${p.liquidez.liquidezAsignada?.toFixed(2)} | Invertida: {p.liquidez.porcentajeInvertido || 0}%
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="period" style={{ marginTop: '8px' }}>
                 <div className="muted">Progreso periodo</div>
                 <div className="progress-wrap">
-                  <div className="progress-bar" style={{ width: `${Math.min(100, Math.round((p.progress || 0) * 100))}%` }}></div>
+                  <div className="progress-bar" style={{ width: `${Math.min(100, Math.round((p.progress || 0) * 100))}%`, backgroundColor: color }}></div>
                 </div>
               </div>
             </div>

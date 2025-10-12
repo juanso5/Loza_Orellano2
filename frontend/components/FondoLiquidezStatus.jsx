@@ -89,7 +89,7 @@ export default function FondoLiquidezStatus({ clienteId, fondoId }) {
 
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-            <span className="muted" style={{ fontSize: "0.85rem" }}>Utilizaci├│n</span>
+            <span className="muted" style={{ fontSize: "0.85rem" }}>Utilizacion</span>
             <span
               style={{
                 fontSize: "0.85rem",

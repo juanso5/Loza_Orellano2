@@ -1,4 +1,9 @@
-export const metadata = { title: 'Loza Orellano' };
+export const metadata = { 
+  title: 'L&O',
+  icons: {
+    icon: '/favicon.svg',
+  }
+};
 
 import '../styles/cobros.css';
 import '../styles/home.css';

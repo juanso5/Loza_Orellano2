@@ -43,7 +43,6 @@ export default function ClientesPage() {
             ...c,
             banks,
             comments: c.comments || c.comentario || "",
-            joinedAt: c.joinedAt || new Date().toISOString(), // solo para vista de fecha
           };
         }));
       } catch (e) {
@@ -74,7 +73,7 @@ export default function ClientesPage() {
   const handleSave = useCallback(async (values) => {
     const {
       name, phone, riskProfile, serviceType,
-      period, fee, banks, comments,
+      period, fee, banks, comments, joinedLocal,
       bank, bankAlias, // compat si vinieran
     } = values;
 
@@ -98,6 +97,7 @@ export default function ClientesPage() {
       periodo: period || null,
       perfil: riskProfile || null,
       comentario: comments || null,
+      fecha_alta: joinedLocal || null,
     };
 
     try {
@@ -142,7 +142,6 @@ export default function ClientesPage() {
               ? created.banks
               : (created.bank ? [{ name: created.bank, alias: created.alias || "" }] : []),
             comments: created.comments || created.comentario || "",
-            joinedAt: new Date().toISOString(),
           },
         ]);
       }

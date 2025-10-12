@@ -61,14 +61,14 @@ export default function Sidebar({ collapsed: collapsedProp, toggleSidebar: toggl
         <li className={isActive('/cliente') ? 'active' : ''}>
           <Link href="/cliente"><i className="fas fa-users" /> <span className="menu-text">Clientes</span></Link>
         </li>
-        <li className={isActive('/movimientos') ? 'active' : ''}>
-          <Link href="/movimientos"><i className="fas fa-exchange-alt" /> <span className="menu-text">Movimientos</span></Link>
-        </li>
         <li className={isActive('/fondos') ? 'active' : ''}>
           <Link href="/fondos"><i className="fas fa-wallet" /> <span className="menu-text">Fondos</span></Link>
         </li>
         <li className={isActive('/liquidez') ? 'active' : ''}>
           <Link href="/liquidez"><i className="fas fa-dollar-sign" /> <span className="menu-text">Liquidez</span></Link>
+        </li>
+        <li className={isActive('/movimientos') ? 'active' : ''}>
+          <Link href="/movimientos"><i className="fas fa-exchange-alt" /> <span className="menu-text">Movimientos</span></Link>
         </li>
         <li>
           <button
