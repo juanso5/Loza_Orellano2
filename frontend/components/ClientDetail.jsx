@@ -6,7 +6,8 @@ export default function ClientDetail({
   client, 
   onOpenPortfolioDetail, 
   onAddPortfolio,
-  onDeleteMovement 
+  onDeleteMovement,
+  onDeletePortfolio 
 }) {
   const totalClient = client.portfolios.reduce((acc, p) => acc + p.funds.reduce((s, f) => s + (f.nominal || 0), 0), 0);
   
@@ -61,6 +62,7 @@ export default function ClientDetail({
             formatNumber={formatNumber}
             fmtDate={fmtDate}
             weighted={weighted}
+            onDelete={onDeletePortfolio}
           />
         ))}
       </div>

@@ -20,6 +20,7 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
   const [clienteIdForm, setClienteIdForm] = useState(clienteId || '');
   const [tipoCarteraId, setTipoCarteraId] = useState('');
   const [liquidezInicial, setLiquidezInicial] = useState('');
+  const [nombreFondo, setNombreFondo] = useState('');
   
   // Campos de metadata dinámicos
   const [metadata, setMetadata] = useState({});
@@ -95,6 +96,14 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
       errs.tipo_cartera = 'Debe seleccionar un tipo de cartera';
     }
 
+    if (!nombreFondo || nombreFondo.trim() === '') {
+      errs.nombre = 'El nombre del fondo es requerido';
+    }
+
+    if (nombreFondo && nombreFondo.length > 255) {
+      errs.nombre = 'El nombre no puede superar los 255 caracteres';
+    }
+
     if (liquidezInicial && parseFloat(liquidezInicial) < 0) {
       errs.liquidez_inicial = 'La liquidez debe ser mayor o igual a 0';
     }
@@ -141,6 +150,7 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
       const payload = {
         cliente_id: Number(clienteIdForm || clienteId),
         tipo_cartera_id: Number(tipoCarteraId),
+        nombre: nombreFondo.trim(),
         deposito_inicial: 0,
         rend_esperado: metadata.rend_esperado ? parseFloat(metadata.rend_esperado) : null,
         plazo: null,
@@ -155,17 +165,35 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
         
         // Parsear campos según estrategia
         if (categoriaSeleccionada === 'jubilacion') {
-          metadataParsed.anos = Number(metadata.anos);
+          const anosNum = Number(metadata.anos);
+          if (!isNaN(anosNum) && anosNum > 0) {
+            metadataParsed.anos = anosNum;
+          } else {
+            throw new Error('Años objetivo es requerido y debe ser mayor a 0');
+          }
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         } else if (categoriaSeleccionada === 'largo_plazo') {
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         } else if (categoriaSeleccionada === 'viajes') {
-          metadataParsed.monto_objetivo = Number(metadata.monto_objetivo);
+          const montoNum = Number(metadata.monto_objetivo);
+          if (!isNaN(montoNum) && montoNum > 0) {
+            metadataParsed.monto_objetivo = montoNum;
+          } else {
+            throw new Error('Monto objetivo es requerido y debe ser mayor a 0');
+          }
           metadataParsed.moneda = metadata.moneda || 'USD';
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         } else if (categoriaSeleccionada === 'objetivo') {
+          if (!metadata.fecha_objetivo) {
+            throw new Error('Fecha objetivo es requerida');
+          }
           metadataParsed.fecha_objetivo = metadata.fecha_objetivo;
-          metadataParsed.monto_objetivo = Number(metadata.monto_objetivo);
+          const montoNum = Number(metadata.monto_objetivo);
+          if (!isNaN(montoNum) && montoNum > 0) {
+            metadataParsed.monto_objetivo = montoNum;
+          } else {
+            throw new Error('Monto objetivo es requerido y debe ser mayor a 0');
+          }
           metadataParsed.moneda = metadata.moneda || 'USD';
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         }
@@ -234,6 +262,24 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               ))}
             </select>
             {errors.tipo_cartera && <small style={{ color: '#d32f2f' }}>{errors.tipo_cartera}</small>}
+          </label>
+
+          {/* Nombre del Fondo */}
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span>Nombre del Fondo <span style={{ color: '#d32f2f' }}>*</span></span>
+            <input
+              type="text"
+              value={nombreFondo}
+              onChange={(e) => setNombreFondo(e.target.value)}
+              required
+              disabled={loading}
+              placeholder="Ej: Auto 0km, Viaje a Europa, Casa propia, etc."
+              maxLength={255}
+            />
+            <small style={{ color: '#666' }}>
+              Nombre personalizado para identificar este fondo
+            </small>
+            {errors.nombre && <small style={{ color: '#d32f2f' }}>{errors.nombre}</small>}
           </label>
 
           {/* Campos dinámicos según estrategia */}

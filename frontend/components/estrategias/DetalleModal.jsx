@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import EstrategiaDetalle from './EstrategiaDetalle';
 
-export default function DetalleModal({ fondo, isOpen, onClose }) {
+export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !fondo?.id_fondo) {
@@ -140,8 +141,33 @@ export default function DetalleModal({ fondo, isOpen, onClose }) {
           borderTop: '1px solid #e5e7eb',
           backgroundColor: '#f9fafb',
           display: 'flex',
-          justifyContent: 'flex-end'
+          justifyContent: 'space-between',
+          gap: '12px'
         }}>
+          {onDelete && (
+            <button
+              onClick={() => setDeleteConfirmOpen(true)}
+              style={{
+                padding: '10px 24px',
+                backgroundColor: '#dc2626',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+            >
+              <i className="fas fa-trash"></i>
+              Eliminar Fondo
+            </button>
+          )}
           <button
             onClick={onClose}
             style={{
@@ -162,6 +188,119 @@ export default function DetalleModal({ fondo, isOpen, onClose }) {
           </button>
         </div>
       </div>
+
+      {/* Modal de Confirmación de Eliminación */}
+      {deleteConfirmOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDeleteConfirmOpen(false);
+          }}
+        >
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '450px',
+            width: '90%',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem',
+                color: '#dc2626'
+              }}>
+                <i className="fas fa-exclamation-triangle"></i>
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#111827' }}>
+                  Confirmar Eliminación
+                </h3>
+              </div>
+            </div>
+
+            <p style={{ margin: '16px 0', fontSize: '0.9375rem', color: '#4b5563', lineHeight: '1.6' }}>
+              ¿Estás seguro que querés eliminar el fondo <strong>"{nombre_cartera}"</strong>?
+            </p>
+
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#fef3c7',
+              borderRadius: '8px',
+              border: '1px solid #fde68a',
+              marginBottom: '20px'
+            }}>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#92400e' }}>
+                <i className="fas fa-info-circle" style={{ marginRight: '6px' }}></i>
+                Esta acción eliminará el fondo y <strong>todos sus movimientos asociados</strong>. Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: '#fff',
+                  color: '#374151',
+                  fontSize: '0.9375rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+              >
+                <i className="fas fa-times" style={{ marginRight: '6px' }}></i>
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setDeleteConfirmOpen(false);
+                  onClose();
+                  onDelete(fondo.id_fondo);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#dc2626',
+                  color: '#fff',
+                  fontSize: '0.9375rem',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+              >
+                <i className="fas fa-trash" style={{ marginRight: '6px' }}></i>
+                Eliminar Fondo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

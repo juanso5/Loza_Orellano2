@@ -446,6 +446,7 @@ export async function POST(req) {
             tipo_operacion: "desasignacion",
             monto_usd: montoMovimiento,
             comentario: comentarioCompra,
+            origen: "compra_automatica",
           });
 
         if (asignError) {
@@ -490,6 +491,7 @@ export async function POST(req) {
                 tipo_operacion: "asignacion",
                 monto_usd: montoMovimiento,
                 comentario: `Asignación automática: ${comentarioVenta}`,
+                origen: "venta_automatica",
               });
 
             if (asignError) {

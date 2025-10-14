@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertAuthenticated } from "../../../lib/authGuard";
 import { getSSRClient } from "../../../lib/supabaseServer";
+import { calcularEstadoLiquidez } from "../../../lib/liquidezHelpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 const getSb = () => getSSRClient(); // async
 
 const SELECT_BASE =
-  "id_fondo,cliente_id,tipo_cartera:tipo_cartera_id(id_tipo_cartera,descripcion,categoria,color,icono),plazo,tipo_plazo,fecha_alta,rend_esperado,deposito_inicial,metadata";
+  "id_fondo,cliente_id,nombre,tipo_cartera:tipo_cartera_id(id_tipo_cartera,descripcion,categoria,color,icono),plazo,tipo_plazo,fecha_alta,rend_esperado,deposito_inicial,metadata";
 
 function toYMD(v) {
   if (!v) return null;
@@ -28,6 +29,7 @@ function mapRow(r) {
   const out = {
     id: Number(r.id_fondo),
     clienteId: r.cliente_id == null ? null : Number(r.cliente_id),
+    nombre: r.nombre || null,
     tipoCarteraId:
       r?.tipo_cartera?.id_tipo_cartera != null
         ? Number(r.tipo_cartera.id_tipo_cartera)
@@ -85,6 +87,7 @@ const metadataSchema = z.union([
 const createSchema = z.object({
   cliente_id: z.coerce.number().int().positive(),
   tipo_cartera_id: z.coerce.number().int().positive(),
+  nombre: z.string().min(1, "El nombre es requerido").max(255, "El nombre es muy largo"),
   deposito_inicial: z.coerce.number().nonnegative().default(0),
   plazo: z.coerce.number().int().positive().optional().nullable(),
   tipo_plazo: z.string().optional().nullable(),
@@ -97,6 +100,7 @@ const updateSchema = z.object({
   id: z.coerce.number().int().positive(),
   cliente_id: z.coerce.number().int().positive().optional(),
   tipo_cartera_id: z.coerce.number().int().positive().optional(),
+  nombre: z.string().min(1).max(255).optional(),
   plazo: z.coerce.number().int().min(0).optional().nullable(),
   tipo_plazo: z.enum(["dias", "meses"]).optional().nullable(),
   fecha_alta: ymd,
@@ -162,6 +166,7 @@ export async function POST(req) {
     const {
       cliente_id,
       tipo_cartera_id,
+      nombre,
       deposito_inicial,
       plazo,
       tipo_plazo,
@@ -172,30 +177,34 @@ export async function POST(req) {
 
     // Si hay liquidez_inicial, validar primero
     if (liquidez_inicial > 0) {
-      const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-      const estadoRes = await fetch(
-        `${baseUrl}/api/liquidez/estado?cliente_id=${cliente_id}`,
-        { headers: req.headers }
-      );
-      const estadoJson = await estadoRes.json().catch(() => ({ success: false }));
+      console.log(`[POST /api/fondo] Validando liquidez inicial: ${liquidez_inicial} USD para cliente ${cliente_id}`);
+      
+      // ✅ Calcular directamente en lugar de hacer fetch interno
+      const estado = await calcularEstadoLiquidez(sb, cliente_id);
+      
+      console.log(`[POST /api/fondo] Estado liquidez:`, estado);
 
-      if (!estadoJson.success || estadoJson.data?.liquidezDisponible < liquidez_inicial) {
+      if (estado.liquidezDisponible < liquidez_inicial) {
+        console.error(`[POST /api/fondo] Liquidez insuficiente. Disponible: ${estado.liquidezDisponible}, Requerido: ${liquidez_inicial}`);
         return NextResponse.json({
           success: false,
-          error: `Liquidez insuficiente. Disponible: $${estadoJson.data?.liquidezDisponible?.toFixed(2) || '0.00'} USD`,
+          error: `Liquidez insuficiente. Disponible: $${estado.liquidezDisponible.toFixed(2)} USD`,
           detalles: {
             requerido: liquidez_inicial,
-            disponible: estadoJson.data?.liquidezDisponible || 0,
-            total: estadoJson.data?.liquidezTotal || 0
+            disponible: estado.liquidezDisponible,
+            total: estado.liquidezTotal
           }
         }, { status: 400 });
       }
+      
+      console.log(`[POST /api/fondo] ✅ Validación de liquidez OK. Disponible: ${estado.liquidezDisponible} USD`);
     }
 
     // 1. Crear el fondo
     const payload = {
       cliente_id,
       tipo_cartera_id,
+      nombre: nombre.trim(),
       deposito_inicial: parseFloat(deposito_inicial),
       plazo,
       tipo_plazo,
@@ -214,33 +223,35 @@ export async function POST(req) {
 
     // 2. Si hay liquidez_inicial, asignarla automáticamente
     if (liquidez_inicial > 0) {
-      const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-      const asignRes = await fetch(
-        `${baseUrl}/api/liquidez/asignar`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...Object.fromEntries(req.headers.entries ? req.headers.entries() : []),
-          },
-          body: JSON.stringify({
-            cliente_id,
-            fondo_id: fondoData.id_fondo,
-            monto_usd: liquidez_inicial,
-            tipo_operacion: 'asignacion',
-            comentario: `Asignación inicial al crear fondo ${tipo_cartera_id}`,
-          }),
-        }
-      );
-
-      // tolerar fallo en asignación para no romper creación de fondo
+      console.log(`[POST /api/fondo] Asignando liquidez inicial: ${liquidez_inicial} USD al fondo ${fondoData.id_fondo}`);
+      
       try {
-        const asignJson = await asignRes.json();
-        if (!asignJson.success) {
-          console.error('Error asignando liquidez inicial:', asignJson.error);
+        // ✅ Insertar directamente en la tabla en lugar de fetch
+        const { data: asignacionData, error: asignacionError } = await sb
+          .from("asignacion_liquidez")
+          .insert({
+            cliente_id: Number(cliente_id),
+            fondo_id: Number(fondoData.id_fondo),
+            fecha: new Date().toISOString(),
+            tipo_operacion: 'asignacion',
+            monto: parseFloat(liquidez_inicial),
+            moneda: 'USD',
+            tipo_cambio_usado: null,
+            monto_usd: parseFloat(liquidez_inicial),
+            comentario: 'Asignación inicial al crear fondo',
+          })
+          .select()
+          .single();
+
+        if (asignacionError) {
+          console.error('[POST /api/fondo] Error asignando liquidez inicial:', asignacionError);
+          // No lanzar error, solo loguear - el fondo ya fue creado
+        } else {
+          console.log(`[POST /api/fondo] ✅ Liquidez asignada exitosamente:`, asignacionData);
         }
       } catch (e) {
-        console.error('Error parsing asignacion response:', e);
+        console.error('[POST /api/fondo] Exception asignando liquidez:', e);
+        // Tolerar el error para no romper la creación del fondo
       }
     }
 

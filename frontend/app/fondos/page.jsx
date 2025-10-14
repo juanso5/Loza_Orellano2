@@ -198,9 +198,9 @@ const FondosPage = () => {
         });
         
         if (!res.ok) {
-          const te = await res.text();
-          console.error("Error creando cartera:", te);
-          throw new Error(te);
+          const error = await res.text();
+          console.error("Error creando cartera:", error);
+          throw new Error(error);
         }
         
         const result = await res.json();
@@ -220,7 +220,7 @@ const FondosPage = () => {
           const fechaAlta = f?.fechaAlta ?? f?.fecha_alta ?? null;
           return {
             id: Number(f.id ?? f.id_fondo ?? f.fondo_id ?? f?.id),
-            name: f?.tipo_cartera?.descripcion || `Cartera ${f?.id ?? ""}`,
+            name: f?.nombre || f?.tipo_cartera?.descripcion || `Cartera ${f?.id ?? ""}`,
             periodMonths:
               tipoPlazo === "meses"
                 ? plazo ?? null
@@ -585,6 +585,9 @@ const FondosPage = () => {
                   onDeleteMovement={(id) => {
                     setPendingDeleteId(id);
                     setIsConfirmDeleteOpen(true);
+                  }}
+                  onDeletePortfolio={(portfolioId) => {
+                    handleDeletePortfolio(selectedClientId, portfolioId);
                   }}
                   onOpenPortfolioDetail={(portfolioId) => {
                     setPortfolioModalContext({

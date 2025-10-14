@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import DetalleModal from './estrategias/DetalleModal';
 
-export default function FondoCardDetallado({ portfolio, totalClient, formatNumber, fmtDate, weighted }) {
+export default function FondoCardDetallado({ portfolio, totalClient, formatNumber, fmtDate, weighted, onDelete }) {
   const [detalleOpen, setDetalleOpen] = useState(false);
   
   // Cálculos básicos
@@ -14,7 +14,8 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
   
   // Metadata y configuración
   const metadata = portfolio.meta?.metadata;
-  const categoria = portfolio.meta?.tipo_cartera?.categoria;
+  const categoriaRaw = portfolio.meta?.tipo_cartera?.categoria;
+  const categoria = categoriaRaw ? categoriaRaw.toLowerCase() : null;
   const color = portfolio.meta?.tipo_cartera?.color || '#8b5cf6';
   const icono = portfolio.meta?.tipo_cartera?.icono || 'fas fa-chart-line';
   const nombre = portfolio.name;
@@ -34,13 +35,15 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
   
   // Estilos base de la card
   const cardBaseStyle = {
-    border: `2px solid ${color}`,
+    border: `1px solid ${color}50`,
     borderRadius: '12px',
-    padding: '20px',
+    padding: '24px',
     backgroundColor: '#fff',
     cursor: 'pointer',
     transition: 'all 0.3s ease',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+    overflow: 'hidden',
+    wordWrap: 'break-word'
   };
   
   const handleCardHover = (e, isHovering) => {
@@ -53,13 +56,25 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
     }
   };
 
+  // Estilo para truncar comentarios largos
+  const comentarioStyle = {
+    display: '-webkit-box',
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: 'vertical',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    wordBreak: 'break-word'
+  };
+
   // JUBILACIÓN
   if (categoria === 'jubilacion') {
-    const fechaAlta = new Date(portfolio.meta?.fecha_alta);
+    const fechaAlta = portfolio.meta?.fecha_alta ? new Date(portfolio.meta.fecha_alta) : new Date();
     const fechaEstimada = new Date(fechaAlta);
-    if (metadata?.anos) {
-      fechaEstimada.setFullYear(fechaEstimada.getFullYear() + parseInt(metadata.anos));
+    const anos = metadata?.anos || metadata?.plazo_anos || 0;
+    if (anos) {
+      fechaEstimada.setFullYear(fechaEstimada.getFullYear() + parseInt(anos));
     }
+    const fechaEstimadaValida = !isNaN(fechaEstimada.getTime());
     
     return (
       <>
@@ -69,89 +84,175 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          {/* Header con ícono mejorado */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px' }}>
             <div style={{
-              width: '48px',
-              height: '48px',
+              width: '52px',
+              height: '52px',
               borderRadius: '12px',
-              backgroundColor: `${color}20`,
+              backgroundColor: `${color}15`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.5rem',
-              color: color
+              color: color,
+              border: `2px solid ${color}30`
             }}>
               <i className={icono}></i>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600', color: '#1f2937' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#111827', letterSpacing: '-0.01em' }}>
                 {nombre}
               </h3>
-              <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '2px' }}>
-                🎯 Objetivo: {metadata?.anos} años
+              <div style={{ 
+                fontSize: '0.8125rem', 
+                color: '#6b7280', 
+                marginTop: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <i className="fas fa-calendar-check" style={{ fontSize: '0.75rem', color: color }} />
+                Objetivo: {anos} años
               </div>
             </div>
           </div>
 
-          {/* Fecha Estimada */}
+          {/* Fecha Estimada - Destacada */}
           {fechaEstimada && (
             <div style={{ 
-              padding: '12px', 
-              backgroundColor: `${color}10`, 
-              borderRadius: '8px', 
-              marginBottom: '12px',
-              border: `1px solid ${color}30`
+              padding: '18px 20px', 
+              background: `linear-gradient(135deg, ${color}12 0%, ${color}25 100%)`,
+              borderRadius: '12px', 
+              marginBottom: '18px',
+              border: `1px solid ${color}50`,
+              boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-                📅 Fecha Estimada
+              <div style={{ 
+                fontSize: '0.75rem', 
+                color: '#6b7280', 
+                marginBottom: '8px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}>
+                Fecha Objetivo
               </div>
-              <div style={{ fontSize: '1rem', fontWeight: '600', color: color }}>
-                {fechaEstimada.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })}
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2px' }}>
-                Creado: {fmtDate(portfolio.meta?.fecha_alta)}
+              <div style={{ fontSize: '1.125rem', fontWeight: '700', color: color }}>
+                {fechaEstimadaValida 
+                  ? fechaEstimada.toLocaleDateString('es-AR', { year: 'numeric', month: 'long', day: 'numeric' })
+                  : 'Por definir'
+                }
               </div>
             </div>
           )}
 
-          {/* Stats Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-                Patrimonio (USD)
-              </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1f2937' }}>
-                ${formatNumber(patrimonio)}
-              </div>
+          {/* Patrimonio HERO - Principal */}
+          <div style={{ 
+            padding: '24px 20px', 
+            backgroundColor: '#dcfce7', 
+            borderRadius: '12px',
+            border: '1px solid #86efac',
+            textAlign: 'center',
+            marginBottom: '18px',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+          }}>
+            <div style={{ 
+              fontSize: '0.75rem', 
+              color: '#15803d', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              Patrimonio Actual
             </div>
-            <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
+            <div style={{ 
+              fontSize: '2.5rem', 
+              fontWeight: '800', 
+              color: '#166534',
+              lineHeight: '1',
+              marginBottom: '6px'
+            }}>
+              ${formatNumber(patrimonio)}
+            </div>
+            <div style={{ fontSize: '0.875rem', color: '#16a34a', fontWeight: '600' }}>USD</div>
+          </div>
+
+          {/* Stats Grid - 3 items */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '18px' }}>
+            <div style={{ 
+              padding: '14px 16px', 
+              backgroundColor: '#dbeafe', 
+              borderRadius: '10px',
+              border: '1px solid #93c5fd',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#1e40af', 
+                marginBottom: '6px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
                 Rend. Esperado
               </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#3b82f6' }}>
-                {metadata?.rend_esperado ? `${metadata.rend_esperado}%` : '-'}
+              <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#1e3a8a' }}>
+                {metadata?.rend_esperado ? `${metadata.rend_esperado}%` : 'N/A'}
               </div>
             </div>
-            <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-                Rend. Real Anual
+
+            <div style={{ 
+              padding: '14px 16px', 
+              backgroundColor: totalReturn >= 0 ? '#dcfce7' : '#fee2e2', 
+              borderRadius: '10px',
+              border: totalReturn >= 0 ? '1px solid #86efac' : '1px solid #fca5a5',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: totalReturn >= 0 ? '#15803d' : '#991b1b', 
+                marginBottom: '6px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Rend. Real
               </div>
               <div style={{ 
-                fontSize: '1.1rem', 
-                fontWeight: '600',
-                color: totalReturn >= 0 ? '#10b981' : '#ef4444'
+                fontSize: '1.125rem', 
+                fontWeight: '700',
+                color: totalReturn >= 0 ? '#166534' : '#dc2626',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px'
               }}>
+                {totalReturn >= 0 ? '↑' : '↓'}
                 {(totalReturn * 100).toFixed(2)}%
               </div>
             </div>
-            <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-                Índice Calculado
+
+            <div style={{ 
+              padding: '14px 16px', 
+              backgroundColor: '#fef3c7', 
+              borderRadius: '10px',
+              border: '1px solid #fde68a',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#92400e', 
+                marginBottom: '6px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Índice Calc.
               </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#8b5cf6' }}>
-                {/* TODO: Pedir a Fran */}
-                -
+              <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#78350f' }}>
+                {metadata?.indice_calculado ? metadata.indice_calculado.toFixed(2) : 'N/A'}
               </div>
             </div>
           </div>
@@ -159,14 +260,17 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           {/* Comentario */}
           {metadata?.comentario && (
             <div style={{ 
-              padding: '12px', 
+              padding: '14px 16px', 
               backgroundColor: '#fef3c7', 
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              color: '#92400e',
-              border: '1px solid #fcd34d'
+              borderRadius: '10px',
+              fontSize: '0.8125rem',
+              color: '#78350f',
+              border: '1px solid #fde68a',
+              lineHeight: '1.5'
             }}>
-              💬 {metadata.comentario}
+              <span style={{ ...comentarioStyle }} title={metadata.comentario}>
+                {metadata.comentario}
+              </span>
             </div>
           )}
         </div>
@@ -175,6 +279,7 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           fondo={fondoData}
           isOpen={detalleOpen}
           onClose={() => setDetalleOpen(false)}
+          onDelete={onDelete}
         />
       </>
     );
@@ -185,6 +290,16 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
     const montoObjetivo = metadata?.monto_objetivo || 0;
     const progreso = montoObjetivo > 0 ? (patrimonio / montoObjetivo) * 100 : 0;
     const monedaSimbolo = metadata?.moneda === 'USD' ? '$' : 'AR$';
+    const destino = metadata?.destino || metadata?.nombre || 'Viaje';
+    
+    // Color dinámico de la barra según progreso
+    const getProgressColor = () => {
+      if (progreso >= 100) return '#22c55e';
+      if (progreso >= 75) return '#84cc16';
+      if (progreso >= 50) return '#f59e0b';
+      if (progreso >= 25) return '#f97316';
+      return '#3b82f6';
+    };
     
     return (
       <>
@@ -194,124 +309,194 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          {/* Header mejorado */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px' }}>
             <div style={{
-              width: '48px',
-              height: '48px',
+              width: '52px',
+              height: '52px',
               borderRadius: '12px',
-              backgroundColor: `${color}20`,
+              backgroundColor: `${color}15`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.5rem',
-              color: color
+              color: color,
+              border: `2px solid ${color}30`
             }}>
               <i className={icono}></i>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600', color: '#1f2937' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#111827', letterSpacing: '-0.01em' }}>
                 {nombre}
               </h3>
-              <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '2px' }}>
-                ✈️ {metadata?.moneda || 'USD'}
-              </div>
-            </div>
-          </div>
-
-          {/* Objetivo */}
-          <div style={{ 
-            padding: '16px', 
-            backgroundColor: `${color}10`, 
-            borderRadius: '8px', 
-            marginBottom: '12px',
-            border: `1px solid ${color}30`,
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-              🎯 Objetivo
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: '700', color: color }}>
-              {monedaSimbolo}{Number(montoObjetivo).toLocaleString('es-AR')}
-            </div>
-          </div>
-
-          {/* Patrimonio y Rendimiento */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-            <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-                Patrimonio
-              </div>
-              <div style={{ fontSize: '1.1rem', fontWeight: '600', color: '#1f2937' }}>
-                {monedaSimbolo}{formatNumber(patrimonio)}
-              </div>
-            </div>
-            <div style={{ padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-                Rend. Real
-              </div>
               <div style={{ 
-                fontSize: '1.1rem', 
-                fontWeight: '600',
-                color: totalReturn >= 0 ? '#10b981' : '#ef4444'
+                fontSize: '0.8125rem', 
+                color: '#6b7280', 
+                marginTop: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
               }}>
-                {(totalReturn * 100).toFixed(2)}%
+                <i className="fas fa-map-marker-alt" style={{ fontSize: '0.75rem', color: color }} />
+                {destino}
               </div>
             </div>
           </div>
 
-          {/* Barra de Progreso */}
-          <div style={{ marginBottom: '12px' }}>
+          {/* Progreso HERO - Principal */}
+          <div style={{ 
+            padding: '20px', 
+            background: `linear-gradient(135deg, ${color}15 0%, ${color}30 100%)`,
+            borderRadius: '12px',
+            border: `1px solid ${color}60`,
+            marginBottom: '18px',
+            textAlign: 'center',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.05)'
+          }}>
             <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between',
-              fontSize: '0.75rem',
-              color: '#6b7280',
-              marginBottom: '6px'
+              fontSize: '0.75rem', 
+              color: '#6b7280', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
             }}>
-              <span>Progreso</span>
-              <span style={{ fontWeight: '600' }}>
-                {monedaSimbolo}{formatNumber(patrimonio)} / {monedaSimbolo}{Number(montoObjetivo).toLocaleString('es-AR')}
-              </span>
+              Progreso del Objetivo
             </div>
+            <div style={{ 
+              fontSize: '3rem', 
+              fontWeight: '800',
+              color: getProgressColor(),
+              lineHeight: '1',
+              marginBottom: '12px'
+            }}>
+              {progreso.toFixed(1)}%
+            </div>
+
+            {/* Barra de Progreso */}
             <div style={{
               width: '100%',
-              height: '24px',
+              height: '12px',
               backgroundColor: '#e5e7eb',
-              borderRadius: '12px',
+              borderRadius: '6px',
               overflow: 'hidden',
-              position: 'relative'
+              position: 'relative',
+              border: '1px solid #d1d5db',
+              marginBottom: '10px'
             }}>
               <div style={{
                 width: `${Math.min(100, progreso)}%`,
                 height: '100%',
-                backgroundColor: color,
-                transition: 'width 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#fff',
-                fontSize: '0.75rem',
+                background: getProgressColor(),
+                transition: 'width 0.4s ease',
+                borderRadius: '6px'
+              }} />
+            </div>
+
+            {progreso >= 100 && (
+              <div style={{ 
+                display: 'inline-block',
+                padding: '6px 12px', 
+                backgroundColor: '#dcfce7',
+                borderRadius: '8px',
+                border: '1px solid #86efac',
+                fontSize: '0.8125rem',
+                color: '#166534',
                 fontWeight: '600'
               }}>
-                {progreso.toFixed(1)}%
+                ✓ ¡Objetivo alcanzado!
+              </div>
+            )}
+          </div>
+
+          {/* Grid: Objetivo y Patrimonio */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '18px' }}>
+            <div style={{ 
+              padding: '16px', 
+              backgroundColor: '#fef3c7',
+              borderRadius: '10px',
+              border: '1px solid #fde68a',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#92400e', 
+                marginBottom: '6px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Objetivo
+              </div>
+              <div style={{ 
+                fontSize: '1.25rem', 
+                fontWeight: '700', 
+                color: '#78350f',
+                wordBreak: 'break-all'
+              }}>
+                {monedaSimbolo}{Number(montoObjetivo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '16px', 
+              backgroundColor: '#dcfce7',
+              borderRadius: '10px',
+              border: '1px solid #86efac',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#15803d', 
+                marginBottom: '6px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Patrimonio
+              </div>
+              <div style={{ 
+                fontSize: '1.125rem', 
+                fontWeight: '700', 
+                color: '#166534',
+                wordBreak: 'break-all'
+              }}>
+                {monedaSimbolo}{formatNumber(patrimonio)}
+              </div>
+              <div style={{ 
+                fontSize: '0.75rem', 
+                fontWeight: '600',
+                marginTop: '4px',
+                color: totalReturn >= 0 ? '#15803d' : '#dc2626'
+              }}>
+                {totalReturn >= 0 ? '↑' : '↓'} {(totalReturn * 100).toFixed(2)}%
               </div>
             </div>
           </div>
 
-          {/* Comentario y Fecha */}
-          <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-            {metadata?.comentario && (
-              <div style={{ marginBottom: '4px' }}>💬 {metadata.comentario}</div>
-            )}
-            <div>📅 Creado: {fmtDate(portfolio.meta?.fecha_alta)}</div>
-          </div>
+          {/* Comentario */}
+          {metadata?.comentario && (
+            <div style={{ 
+              padding: '14px 16px',
+              backgroundColor: '#fef3c7',
+              borderRadius: '10px',
+              fontSize: '0.8125rem',
+              color: '#78350f',
+              border: '1px solid #fde68a',
+              lineHeight: '1.5'
+            }}>
+              <span style={{ ...comentarioStyle }} title={metadata.comentario}>
+                {metadata.comentario}
+              </span>
+            </div>
+          )}
         </div>
         
         <DetalleModal
           fondo={fondoData}
           isOpen={detalleOpen}
           onClose={() => setDetalleOpen(false)}
+          onDelete={onDelete}
         />
       </>
     );
@@ -327,75 +512,155 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+          {/* Header mejorado */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
             <div style={{
-              width: '48px',
-              height: '48px',
+              width: '52px',
+              height: '52px',
               borderRadius: '12px',
-              backgroundColor: `${color}20`,
+              backgroundColor: `${color}15`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.5rem',
-              color: color
+              color: color,
+              border: `2px solid ${color}30`
             }}>
               <i className={icono}></i>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600', color: '#1f2937' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#111827', letterSpacing: '-0.01em' }}>
                 {nombre}
               </h3>
-              <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '2px' }}>
-                📈 USD
+              <div style={{ 
+                fontSize: '0.8125rem', 
+                color: '#6b7280', 
+                marginTop: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                <i className="fas fa-seedling" style={{ fontSize: '0.75rem', color: color }} />
+                Inversión estratégica
               </div>
             </div>
           </div>
 
-          {/* Rendimiento Real - Destacado */}
+          {/* HERO METRIC - Rendimiento Real */}
           <div style={{ 
-            padding: '24px', 
-            backgroundColor: `${color}10`, 
-            borderRadius: '12px', 
-            marginBottom: '16px',
-            border: `2px solid ${color}`,
-            textAlign: 'center'
+            textAlign: 'center',
+            marginBottom: '18px'
           }}>
-            <div style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '8px' }}>
-              📊 Rendimiento Real
+            <div style={{ 
+              fontSize: '0.75rem', 
+              color: '#6b7280', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              Rendimiento Real
             </div>
             <div style={{ 
-              fontSize: '2.5rem', 
-              fontWeight: '700',
-              color: totalReturn >= 0 ? '#10b981' : '#ef4444'
+              fontSize: '3rem', 
+              fontWeight: '800',
+              color: totalReturn >= 0 ? '#10b981' : '#dc2626',
+              lineHeight: '1'
             }}>
-              {(totalReturn * 100).toFixed(2)}%
+              {totalReturn >= 0 ? '↑' : '↓'} {(totalReturn * 100).toFixed(2)}%
+            </div>
+            {totalReturn >= 100 && (
+              <div style={{ 
+                marginTop: '10px', 
+                padding: '6px 12px', 
+                backgroundColor: '#dcfce7',
+                borderRadius: '6px',
+                border: '1px solid #86efac',
+                display: 'inline-block',
+                fontSize: '0.75rem',
+                color: '#166534',
+                fontWeight: '600'
+              }}>
+                ¡Excelente rendimiento!
+              </div>
+            )}
+          </div>
+
+          {/* Grid - 2 items */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ 
+              padding: '16px', 
+              backgroundColor: '#dbeafe',
+              borderRadius: '10px',
+              border: '1px solid #3b82f680',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#1e40af', 
+                marginBottom: '8px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Patrimonio
+              </div>
+              <div style={{ 
+                fontSize: '1.25rem', 
+                fontWeight: '700', 
+                color: '#1e3a8a',
+                wordBreak: 'break-all'
+              }}>
+                ${formatNumber(patrimonio)}
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '16px', 
+              backgroundColor: '#dcfce7',
+              borderRadius: '10px',
+              border: '1px solid #10b98180',
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#15803d', 
+                marginBottom: '8px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Moneda
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: '#166534' }}>
+                USD
+              </div>
             </div>
           </div>
 
-          {/* Comentario y Fecha */}
+          {/* Comentario */}
           {metadata?.comentario && (
             <div style={{ 
-              padding: '12px', 
-              backgroundColor: '#f9fafb', 
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              color: '#4b5563',
-              marginBottom: '12px'
+              padding: '14px 16px',
+              backgroundColor: '#fef3c7',
+              borderRadius: '10px',
+              fontSize: '0.8125rem',
+              color: '#78350f',
+              border: '1px solid #fde68a',
+              lineHeight: '1.5'
             }}>
-              💬 {metadata.comentario}
+              <span style={{ ...comentarioStyle }} title={metadata.comentario}>
+                {metadata.comentario}
+              </span>
             </div>
           )}
-          
-          <div style={{ fontSize: '0.8rem', color: '#6b7280', textAlign: 'center' }}>
-            📅 Creado: {fmtDate(portfolio.meta?.fecha_alta)}
-          </div>
         </div>
         
         <DetalleModal
           fondo={fondoData}
           isOpen={detalleOpen}
           onClose={() => setDetalleOpen(false)}
+          onDelete={onDelete}
         />
       </>
     );
@@ -418,82 +683,166 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
         >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          {/* Header mejorado */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '18px' }}>
             <div style={{
-              width: '48px',
-              height: '48px',
+              width: '52px',
+              height: '52px',
               borderRadius: '12px',
-              backgroundColor: `${color}20`,
+              background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '1.5rem',
-              color: color
+              color: '#ffffff',
+              border: `2px solid ${color}`,
+              boxShadow: `0 4px 12px ${color}40`
             }}>
               <i className={icono}></i>
             </div>
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '600', color: '#1f2937' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#111827', letterSpacing: '-0.01em' }}>
                 {nombre}
               </h3>
-              <div style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '2px' }}>
-                🎯 {metadata?.moneda || 'USD'}
+              <div style={{ 
+                fontSize: '0.8125rem', 
+                color: '#6b7280', 
+                marginTop: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}>
+                <i className="fas fa-bullseye" style={{ fontSize: '0.75rem', color: color }} />
+                {metadata?.moneda || 'USD'}
               </div>
             </div>
           </div>
 
-          {/* Fecha Objetivo */}
+          {/* HERO METRIC - Días Restantes */}
           <div style={{ 
-            padding: '14px', 
-            backgroundColor: `${color}10`, 
-            borderRadius: '8px', 
-            marginBottom: '12px',
-            border: `1px solid ${color}30`
+            textAlign: 'center',
+            marginBottom: '14px'
           }}>
-            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-              📅 Fecha Objetivo
+            <div style={{ 
+              fontSize: '0.75rem', 
+              color: '#6b7280', 
+              marginBottom: '10px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              {diasRestantes > 0 ? 'Días Restantes' : 'Estado'}
             </div>
-            <div style={{ fontSize: '1.2rem', fontWeight: '600', color: color }}>
-              {fmtDate(metadata?.fecha_objetivo)}
+            <div style={{ 
+              fontSize: '3rem', 
+              fontWeight: '800',
+              color: diasRestantes > 0 ? color : '#10b981',
+              lineHeight: '1'
+            }}>
+              {diasRestantes > 0 ? diasRestantes : '✓'}
             </div>
-            {diasRestantes !== null && (
-              <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '4px' }}>
-                {diasRestantes > 0 ? `⏳ ${diasRestantes} días restantes` : '✅ Objetivo cumplido'}
+            {diasRestantes <= 0 && (
+              <div style={{ 
+                marginTop: '10px', 
+                padding: '6px 12px', 
+                backgroundColor: '#dcfce7',
+                borderRadius: '6px',
+                border: '1px solid #86efac',
+                display: 'inline-block',
+                fontSize: '0.75rem',
+                color: '#166534',
+                fontWeight: '600'
+              }}>
+                ¡Objetivo cumplido!
               </div>
             )}
           </div>
 
-          {/* Monto Objetivo y Rendimiento */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+          {/* Fecha Objetivo Box */}
+          <div style={{ 
+            padding: '16px 18px', 
+            background: `linear-gradient(135deg, ${color}12 0%, ${color}25 100%)`,
+            borderRadius: '10px', 
+            marginBottom: '14px',
+            border: `1px solid ${color}50`,
+            textAlign: 'center'
+          }}>
             <div style={{ 
-              padding: '12px', 
-              backgroundColor: '#f9fafb', 
-              borderRadius: '8px',
+              fontSize: '0.6875rem', 
+              color: '#6b7280', 
+              marginBottom: '6px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              Fecha Objetivo
+            </div>
+            <div style={{ fontSize: '1.125rem', fontWeight: '700', color: color }}>
+              {fmtDate(metadata?.fecha_objetivo)}
+            </div>
+          </div>
+
+          {/* Grid - 3 items */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ 
+              padding: '16px', 
+              backgroundColor: '#fef3c7',
+              borderRadius: '10px',
+              border: '1px solid #fde68a',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#92400e', 
+                marginBottom: '8px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
                 Objetivo
               </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: '600', color: '#1f2937' }}>
+              <div style={{ 
+                fontSize: '1.125rem', 
+                fontWeight: '700', 
+                color: '#78350f',
+                wordBreak: 'break-all'
+              }}>
                 {monedaSimbolo}{Number(montoObjetivo).toLocaleString('es-AR')}
               </div>
             </div>
+
             <div style={{ 
-              padding: '12px', 
-              backgroundColor: '#f9fafb', 
-              borderRadius: '8px',
+              padding: '16px', 
+              backgroundColor: '#dcfce7',
+              borderRadius: '10px',
+              border: '1px solid #10b98180',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>
-                Rend. Real
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#15803d', 
+                marginBottom: '8px',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.03em'
+              }}>
+                Patrimonio
               </div>
               <div style={{ 
-                fontSize: '1.2rem', 
-                fontWeight: '600',
-                color: totalReturn >= 0 ? '#10b981' : '#ef4444'
+                fontSize: '1.125rem', 
+                fontWeight: '700',
+                color: '#166534',
+                wordBreak: 'break-all'
               }}>
-                {(totalReturn * 100).toFixed(2)}%
+                {monedaSimbolo}{formatNumber(patrimonio)}
+              </div>
+              <div style={{ 
+                fontSize: '0.75rem', 
+                fontWeight: '600',
+                marginTop: '4px',
+                color: totalReturn >= 0 ? '#15803d' : '#dc2626'
+              }}>
+                {totalReturn >= 0 ? '↑' : '↓'} {(totalReturn * 100).toFixed(2)}%
               </div>
             </div>
           </div>
@@ -501,14 +850,17 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           {/* Comentario */}
           {metadata?.comentario && (
             <div style={{ 
-              padding: '12px', 
-              backgroundColor: '#fef3c7', 
-              borderRadius: '8px',
-              fontSize: '0.85rem',
-              color: '#92400e',
-              border: '1px solid #fcd34d'
+              padding: '14px 16px',
+              backgroundColor: '#fef3c7',
+              borderRadius: '10px',
+              fontSize: '0.8125rem',
+              color: '#78350f',
+              border: '1px solid #fde68a',
+              lineHeight: '1.5'
             }}>
-              💬 {metadata.comentario}
+              <span style={{ ...comentarioStyle }} title={metadata.comentario}>
+                {metadata.comentario}
+              </span>
             </div>
           )}
         </div>
@@ -517,6 +869,7 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
           fondo={fondoData}
           isOpen={detalleOpen}
           onClose={() => setDetalleOpen(false)}
+          onDelete={onDelete}
         />
       </>
     );
@@ -524,24 +877,102 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
 
   // FALLBACK - Sin estrategia definida
   return (
-    <div 
-      onClick={() => setDetalleOpen(true)}
-      style={cardBaseStyle}
-      onMouseEnter={(e) => handleCardHover(e, true)}
-      onMouseLeave={(e) => handleCardHover(e, false)}
-    >
-      {/* Contenido genérico */}
-      <div style={{ textAlign: 'center', padding: '20px' }}>
-        <i className={icono} style={{ fontSize: '3rem', color: color, marginBottom: '12px' }}></i>
-        <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: '600' }}>{nombre}</h3>
-        <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>Estrategia no configurada</p>
+    <>
+      <div 
+        onClick={() => setDetalleOpen(true)}
+        style={cardBaseStyle}
+        onMouseEnter={(e) => handleCardHover(e, true)}
+        onMouseLeave={(e) => handleCardHover(e, false)}
+      >
+        {/* Header mejorado */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+          <div style={{
+            width: '52px',
+            height: '52px',
+            borderRadius: '12px',
+            background: `linear-gradient(135deg, ${color} 0%, ${color}cc 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.5rem',
+            color: '#ffffff',
+            border: `2px solid ${color}`,
+            boxShadow: `0 4px 12px ${color}40`
+          }}>
+            <i className={icono}></i>
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '600', color: '#111827', letterSpacing: '-0.01em' }}>
+              {nombre}
+            </h3>
+            <div style={{ 
+              fontSize: '0.8125rem', 
+              color: '#6b7280', 
+              marginTop: '3px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}>
+              <i className="fas fa-briefcase" style={{ fontSize: '0.75rem', color: color }} />
+              Fondo de inversión
+            </div>
+          </div>
+        </div>
+
+        {/* HERO METRIC - Patrimonio */}
+        <div style={{ 
+          textAlign: 'center',
+          marginBottom: '18px'
+        }}>
+          <div style={{ 
+            fontSize: '0.75rem', 
+            color: '#6b7280', 
+            marginBottom: '10px',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            Patrimonio Total
+          </div>
+          <div style={{ 
+            fontSize: '2.5rem', 
+            fontWeight: '800',
+            color: '#111827',
+            lineHeight: '1'
+          }}>
+            ${formatNumber(patrimonio)}
+          </div>
+          <div style={{ 
+            fontSize: '0.875rem',
+            color: '#059669',
+            fontWeight: '600',
+            marginTop: '8px'
+          }}>USD</div>
+        </div>
+
+        {/* Info message */}
+        <div style={{ 
+          padding: '14px 16px', 
+          backgroundColor: '#dbeafe',
+          borderRadius: '10px',
+          border: '1px solid #3b82f680',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '0.8125rem', color: '#1e40af', fontWeight: '600', marginBottom: '4px' }}>
+            Estrategia no configurada
+          </div>
+          <div style={{ fontSize: '0.75rem', color: '#1e3a8a' }}>
+            Configura una estrategia para ver métricas específicas
+          </div>
+        </div>
       </div>
       
       <DetalleModal
         fondo={fondoData}
         isOpen={detalleOpen}
         onClose={() => setDetalleOpen(false)}
+        onDelete={onDelete}
       />
-    </div>
+    </>
   );
 }

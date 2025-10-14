@@ -70,6 +70,9 @@ export default function Sidebar({ collapsed: collapsedProp, toggleSidebar: toggl
         <li className={isActive('/movimientos') ? 'active' : ''}>
           <Link href="/movimientos"><i className="fas fa-exchange-alt" /> <span className="menu-text">Movimientos</span></Link>
         </li>
+        <li className={isActive('/rendimientos') ? 'active' : ''}>
+          <Link href="/rendimientos"><i className="fas fa-chart-line" /> <span className="menu-text">Rendimientos</span></Link>
+        </li>
         <li>
           <button
             onClick={async () => { const sb = getSupabaseBrowserClient(); if (sb) { await sb.auth.signOut(); } router.replace('/login'); }}
@@ -78,7 +81,6 @@ export default function Sidebar({ collapsed: collapsedProp, toggleSidebar: toggl
             <i className="fas fa-sign-out-alt" /> <span className="menu-text">Salir</span>
           </button>
         </li>
-  {/* Ruta de rendimientos aún no implementada */}
       </ul>
     </div>
   );

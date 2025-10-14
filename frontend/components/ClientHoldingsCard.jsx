@@ -48,7 +48,7 @@ export default function ClientHoldingsCard({ client, onAdd }) {
       const jm = await rm.json();
       const fundsArr = (Array.isArray(jf?.data) ? jf.data : []).map(f => ({
         id: Number(f.id ?? f.id_fondo ?? f.fondo_id ?? 0),
-        name: f?.tipo_cartera?.descripcion || f?.descripcion || f?.name || `Cartera ${f?.id ?? ''}`,
+        name: f?.nombre || f?.tipo_cartera?.descripcion || f?.descripcion || f?.name || `Cartera ${f?.id ?? ''}`,
       }));
       const movArr = (Array.isArray(jm?.data) ? jm.data : []).map(m => ({
         fondo_id: Number(m.fondo_id) || null,

@@ -90,68 +90,193 @@ const EspeciesTable = ({ fondoId }) => {
   );
 };
 
-// Componente común para mostrar depósitos y extracciones
+// Componente común para mostrar depósitos y extracciones (CON SEPARACIÓN)
 const MovimientosLiquidezTable = ({ movimientos }) => {
   if (!movimientos || movimientos.length === 0) {
     return <p style={{ textAlign: 'center', color: '#6b7280', padding: '16px' }}>No hay movimientos de liquidez</p>;
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {movimientos.map(mov => {
-        const monto = Number(mov.monto_usd || mov.monto || 0);
-        const isDeposito = mov.tipo_mov === 'deposito' || mov.tipo_operacion === 'asignacion';
-        
-        return (
-          <div 
-            key={mov.id || mov.id_mov_liq || Math.random()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '12px',
-              backgroundColor: '#f9fafb',
-              borderRadius: '8px',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                padding: '8px',
-                borderRadius: '50%',
-                backgroundColor: isDeposito ? '#d1fae5' : '#fee2e2'
-              }}>
-                <span style={{ fontSize: '1.2rem', color: isDeposito ? '#059669' : '#dc2626' }}>
-                  {isDeposito ? '↗' : '↘'}
-                </span>
-              </div>
-              <div>
-                <p style={{ fontWeight: '500', color: '#111827', margin: 0 }}>
-                  {isDeposito ? 'Depósito/Asignación' : 'Extracción/Desasignación'}
-                </p>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '2px 0 0 0' }}>
-                  {new Date(mov.fecha).toLocaleDateString()}
-                </p>
-                {mov.comentario && (
-                  <p style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic', margin: '4px 0 0 0' }}>
-                    {mov.comentario}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ fontWeight: '600', fontSize: '1.125rem', color: isDeposito ? '#059669' : '#dc2626', margin: 0 }}>
-                {isDeposito ? '+' : '-'}${monto.toFixed(2)}
-              </p>
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '2px 0 0 0' }}>
-                USD
-              </p>
-            </div>
+  // Separar movimientos manuales de automáticos
+  const manuales = movimientos.filter(m => m.origen === 'manual' || (!m.origen && !m.comentario?.includes('automática')));
+  const automaticos = movimientos.filter(m => 
+    m.origen === 'compra_automatica' || 
+    m.origen === 'venta_automatica' || 
+    m.comentario?.includes('automática') ||
+    m.comentario?.includes('Recupero por venta')
+  );
+
+  // Calcular balances
+  const balanceManuales = manuales.reduce((sum, m) => {
+    const monto = Number(m.monto_usd || m.monto || 0);
+    const isIngreso = m.tipo_mov === 'deposito' || m.tipo_operacion === 'asignacion';
+    return sum + (isIngreso ? monto : -monto);
+  }, 0);
+
+  const balanceAutomaticos = automaticos.reduce((sum, m) => {
+    const monto = Number(m.monto_usd || m.monto || 0);
+    const isIngreso = m.tipo_mov === 'deposito' || m.tipo_operacion === 'asignacion';
+    return sum + (isIngreso ? monto : -monto);
+  }, 0);
+
+  const balanceTotal = balanceManuales + balanceAutomaticos;
+
+  const renderMovimiento = (mov, showOrigen = false) => {
+    const monto = Number(mov.monto_usd || mov.monto || 0);
+    const isDeposito = mov.tipo_mov === 'deposito' || mov.tipo_operacion === 'asignacion';
+    
+    return (
+      <div 
+        key={mov.id || mov.id_mov_liq || Math.random()}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px',
+          backgroundColor: '#f9fafb',
+          borderRadius: '8px',
+          transition: 'background-color 0.2s'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            padding: '8px',
+            borderRadius: '50%',
+            backgroundColor: isDeposito ? '#d1fae5' : '#fee2e2'
+          }}>
+            <span style={{ fontSize: '1.2rem', color: isDeposito ? '#059669' : '#dc2626' }}>
+              {isDeposito ? '↗' : '↘'}
+            </span>
           </div>
-        );
-      })}
+          <div>
+            <p style={{ fontWeight: '500', color: '#111827', margin: 0 }}>
+              {isDeposito ? 'Depósito/Asignación' : 'Extracción/Desasignación'}
+            </p>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '2px 0 0 0' }}>
+              {new Date(mov.fecha).toLocaleDateString()}
+            </p>
+            {mov.comentario && (
+              <p style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic', margin: '4px 0 0 0' }}>
+                {mov.comentario}
+              </p>
+            )}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontWeight: '600', fontSize: '1.125rem', color: isDeposito ? '#059669' : '#dc2626', margin: 0 }}>
+            {isDeposito ? '+' : '-'}${monto.toFixed(2)}
+          </p>
+          <p style={{ fontSize: '0.75rem', color: '#6b7280', margin: '2px 0 0 0' }}>
+            USD
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Asignaciones Manuales */}
+      {manuales.length > 0 && (
+        <div>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            paddingBottom: '8px',
+            borderBottom: '2px solid #3b82f6'
+          }}>
+            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              💰 Asignaciones Manuales
+              <span style={{ fontSize: '0.75rem', fontWeight: '400', color: '#6b7280' }}>
+                ({manuales.length})
+              </span>
+            </h4>
+            <span style={{ 
+              fontSize: '0.875rem', 
+              fontWeight: '600', 
+              color: balanceManuales >= 0 ? '#059669' : '#dc2626',
+              padding: '4px 12px',
+              backgroundColor: balanceManuales >= 0 ? '#d1fae5' : '#fee2e2',
+              borderRadius: '9999px'
+            }}>
+              {balanceManuales >= 0 ? '+' : ''}${balanceManuales.toFixed(2)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {manuales.map(m => renderMovimiento(m))}
+          </div>
+        </div>
+      )}
+
+      {/* Movimientos por Trading Automático */}
+      {automaticos.length > 0 && (
+        <div>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            paddingBottom: '8px',
+            borderBottom: '2px solid #8b5cf6'
+          }}>
+            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '600', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🔄 Movimientos por Trading
+              <span style={{ fontSize: '0.75rem', fontWeight: '400', color: '#6b7280' }}>
+                ({automaticos.length})
+              </span>
+            </h4>
+            <span style={{ 
+              fontSize: '0.875rem', 
+              fontWeight: '600', 
+              color: balanceAutomaticos >= 0 ? '#059669' : '#dc2626',
+              padding: '4px 12px',
+              backgroundColor: balanceAutomaticos >= 0 ? '#d1fae5' : '#fee2e2',
+              borderRadius: '9999px'
+            }}>
+              {balanceAutomaticos >= 0 ? '+' : ''}${balanceAutomaticos.toFixed(2)}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {automaticos.map(m => renderMovimiento(m))}
+          </div>
+        </div>
+      )}
+
+      {/* Balance Total */}
+      <div style={{
+        padding: '16px',
+        backgroundColor: '#f9fafb',
+        borderRadius: '12px',
+        border: '2px solid #e5e7eb',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        <div>
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+            Balance de Liquidez del Fondo
+          </p>
+          <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#9ca3af' }}>
+            Disponible para nuevas operaciones
+          </p>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ 
+            margin: 0, 
+            fontSize: '1.5rem', 
+            fontWeight: '700', 
+            color: balanceTotal >= 0 ? '#059669' : '#dc2626' 
+          }}>
+            ${balanceTotal.toFixed(2)}
+          </p>
+          <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#6b7280' }}>
+            USD
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

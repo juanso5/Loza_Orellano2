@@ -1,50 +1,86 @@
 'use client';
 
 import { useMemo } from 'react';
-import { 
-  Briefcase, 
-  Plane, 
-  Target, 
-  TrendingUp, 
-  Calendar,
-  DollarSign 
-} from 'lucide-react';
 
 // Componentes específicos para cada estrategia
 const JubilacionCard = ({ data }) => {
   const { metadata, fecha_alta, rend_esperado, valor_total_fondo, rendimiento_real } = data;
   const fechaCreacion = new Date(fecha_alta);
   const fechaEstimada = new Date(fecha_alta);
-  fechaEstimada.setFullYear(fechaEstimada.getFullYear() + (metadata?.anos || 0));
+  const anos = metadata?.anos || metadata?.plazo_anos || 0;
+  fechaEstimada.setFullYear(fechaEstimada.getFullYear() + anos);
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-blue-50 p-3 rounded-lg">
-          <p className="text-xs text-blue-600 mb-1">Fecha Estimada</p>
-          <p className="font-semibold text-blue-900 text-sm">{fechaEstimada.toLocaleDateString()}</p>
-          <p className="text-xs text-blue-600">{metadata?.anos || 0} años</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Fila superior: Objetivo y Patrimonio */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        <div style={{ 
+          backgroundColor: '#f0f9ff', 
+          padding: '0.875rem', 
+          borderRadius: '8px',
+          border: '1px solid #bae6fd'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#0369a1', fontWeight: '500', marginBottom: '0.25rem' }}>
+            <i className="fas fa-calendar-alt" style={{ marginRight: '0.375rem' }} />
+            Objetivo: {anos} años
+          </div>
+          <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0c4a6e' }}>
+            {fechaEstimada.toLocaleDateString('es-AR')}
+          </div>
+          <div style={{ fontSize: '0.6875rem', color: '#0284c7', marginTop: '0.125rem' }}>
+            Creado: {fechaCreacion.toLocaleDateString('es-AR')}
+          </div>
         </div>
-        <div className="bg-green-50 p-3 rounded-lg">
-          <p className="text-xs text-green-600 mb-1">Patrimonio</p>
-          <p className="font-semibold text-green-900 text-sm">${Number(valor_total_fondo || 0).toFixed(2)}</p>
+        
+        <div style={{ 
+          backgroundColor: '#f0fdf4', 
+          padding: '0.875rem', 
+          borderRadius: '8px',
+          border: '1px solid #bbf7d0'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: '500', marginBottom: '0.25rem' }}>
+            Patrimonio (USD)
+          </div>
+          <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#166534' }}>
+            ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-2">
-        <div className="text-center p-2 bg-gray-50 rounded">
-          <p className="text-xs text-gray-600">Rend. Esperado</p>
-          <p className="font-semibold text-sm">{rend_esperado ? `${rend_esperado}%` : 'N/A'}</p>
+      {/* Fila inferior: Rendimientos */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '0.75rem', 
+          backgroundColor: '#fafafa', 
+          borderRadius: '6px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+            Rend. Esperado
+          </div>
+          <div style={{ fontSize: '1rem', fontWeight: '600', color: '#111827' }}>
+            {rend_esperado ? `${Number(rend_esperado).toFixed(2)}%` : 'N/A'}
+          </div>
         </div>
-        <div className="text-center p-2 bg-gray-50 rounded">
-          <p className="text-xs text-gray-600">Rend. Real Anual</p>
-          <p className={`font-semibold text-sm ${rendimiento_real >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '0.75rem', 
+          backgroundColor: '#fafafa', 
+          borderRadius: '6px',
+          border: '1px solid #e5e7eb'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+            Índice Calculado
+          </div>
+          <div style={{ 
+            fontSize: '1rem', 
+            fontWeight: '600', 
+            color: rendimiento_real >= 0 ? '#15803d' : '#dc2626'
+          }}>
             {Number(rendimiento_real || 0).toFixed(2)}%
-          </p>
-        </div>
-        <div className="text-center p-2 bg-gray-50 rounded">
-          <p className="text-xs text-gray-600">Creación</p>
-          <p className="font-semibold text-xs">{fechaCreacion.toLocaleDateString()}</p>
+          </div>
         </div>
       </div>
     </div>
@@ -56,69 +92,198 @@ const ViajesCard = ({ data }) => {
   const monto_objetivo = metadata?.monto_objetivo || 0;
   const moneda = metadata?.moneda || 'USD';
   const progreso = monto_objetivo > 0 ? (valor_total_fondo / monto_objetivo) * 100 : 0;
-  const nombre_cartera = tipo_cartera?.descripcion || 'Viajes';
+  const destino = metadata?.destino || 'Viaje';
+  
+  const getProgressColor = () => {
+    if (progreso >= 100) return '#22c55e';
+    if (progreso >= 75) return '#84cc16';
+    if (progreso >= 50) return '#eab308';
+    if (progreso >= 25) return '#f97316';
+    return '#3b82f6';
+  };
   
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-orange-50 p-3 rounded-lg">
-          <p className="text-xs text-orange-600 mb-1">Objetivo {moneda}</p>
-          <p className="font-semibold text-orange-900 text-sm">${Number(monto_objetivo).toFixed(2)}</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Destino y Patrimonio */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        <div style={{ 
+          backgroundColor: '#fff7ed', 
+          padding: '0.875rem', 
+          borderRadius: '8px',
+          border: '1px solid #fed7aa'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#c2410c', fontWeight: '500', marginBottom: '0.25rem' }}>
+            <i className="fas fa-map-marker-alt" style={{ marginRight: '0.375rem' }} />
+            Destino
+          </div>
+          <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#7c2d12' }}>
+            {destino}
+          </div>
+          <div style={{ fontSize: '0.6875rem', color: '#ea580c', marginTop: '0.125rem' }}>
+            Objetivo: ${Number(monto_objetivo).toLocaleString('es-AR')}
+          </div>
         </div>
-        <div className="bg-purple-50 p-3 rounded-lg">
-          <p className="text-xs text-purple-600 mb-1">Patrimonio</p>
-          <p className="font-semibold text-purple-900 text-sm">${Number(valor_total_fondo || 0).toFixed(2)}</p>
+        
+        <div style={{ 
+          backgroundColor: '#faf5ff', 
+          padding: '0.875rem', 
+          borderRadius: '8px',
+          border: '1px solid #e9d5ff'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#7e22ce', fontWeight: '500', marginBottom: '0.25rem' }}>
+            Patrimonio ({moneda})
+          </div>
+          <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#6b21a8' }}>
+            ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm">
-          <span className="text-gray-600 font-medium">Progreso</span>
-          <span className="font-semibold">{progreso.toFixed(1)}%</span>
+      {/* Barra de progreso */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
+            <i className="fas fa-chart-line" style={{ marginRight: '0.375rem' }} />
+            Progreso del objetivo
+          </span>
+          <span style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#111827' }}>
+            {progreso.toFixed(1)}%
+          </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+        <div style={{ 
+          width: '100%', 
+          backgroundColor: '#e5e7eb', 
+          borderRadius: '9999px', 
+          height: '14px', 
+          overflow: 'hidden',
+          border: '1px solid #d1d5db'
+        }}>
           <div
-            className={`h-3 rounded-full transition-all flex items-center justify-end pr-2 ${
-              progreso >= 100 ? 'bg-green-500' :
-              progreso >= 75 ? 'bg-green-400' :
-              progreso >= 50 ? 'bg-yellow-400' :
-              progreso >= 25 ? 'bg-orange-400' :
-              'bg-blue-400'
-            }`}
-            style={{ width: `${Math.min(progreso, 100)}%` }}
+            style={{ 
+              height: '14px', 
+              borderRadius: '9999px', 
+              transition: 'width 0.3s ease', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'flex-end', 
+              paddingRight: '6px',
+              backgroundColor: getProgressColor(),
+              width: `${Math.min(progreso, 100)}%`
+            }}
           >
-            {progreso >= 10 && (
-              <span className="text-xs font-bold text-white">${Number(valor_total_fondo || 0).toFixed(0)}</span>
+            {progreso >= 15 && (
+              <span style={{ fontSize: '0.6875rem', fontWeight: '700', color: '#fff' }}>
+                ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+              </span>
             )}
           </div>
         </div>
       </div>
 
-      <div className="text-center p-2 bg-gray-50 rounded">
-        <p className="text-xs text-gray-600">Rendimiento Real</p>
-        <p className={`font-semibold ${rendimiento_real >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+      {/* Rendimiento */}
+      <div style={{ 
+        textAlign: 'center', 
+        padding: '0.75rem', 
+        backgroundColor: '#fafafa', 
+        borderRadius: '6px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+          Rendimiento Real
+        </div>
+        <div style={{ 
+          fontSize: '1rem', 
+          fontWeight: '600', 
+          color: rendimiento_real >= 0 ? '#15803d' : '#dc2626'
+        }}>
           {Number(rendimiento_real || 0).toFixed(2)}%
-        </p>
+        </div>
       </div>
     </div>
   );
 };
 
 const LargoPlazoCard = ({ data }) => {
-  const { tipo_cartera, rendimiento_real } = data;
+  const { tipo_cartera, rendimiento_real, valor_total_fondo, fecha_alta } = data;
+  const fechaCreacion = fecha_alta ? new Date(fecha_alta) : null;
   const nombre_cartera = tipo_cartera?.descripcion || 'Largo Plazo';
   
   return (
-    <div className="space-y-3">
-      <div className="bg-blue-50 p-4 rounded-lg text-center">
-        <p className="text-sm text-blue-600 mb-2">Rendimiento Real</p>
-        <p className={`text-2xl font-bold ${rendimiento_real >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Rendimiento destacado */}
+      <div style={{ 
+        backgroundColor: '#eff6ff', 
+        padding: '1.25rem', 
+        borderRadius: '10px', 
+        textAlign: 'center',
+        border: '2px solid #bfdbfe'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.5rem'
+        }}>
+          <i className="fas fa-chart-area" style={{ color: '#2563eb', fontSize: '1.125rem' }} />
+          <div style={{ fontSize: '0.875rem', color: '#1e40af', fontWeight: '500' }}>
+            Rendimiento Real
+          </div>
+        </div>
+        <div style={{ 
+          fontSize: '2rem', 
+          fontWeight: '700', 
+          color: rendimiento_real >= 0 ? '#15803d' : '#dc2626'
+        }}>
           {Number(rendimiento_real || 0).toFixed(2)}%
-        </p>
+        </div>
       </div>
 
-      <div className="text-center text-sm text-gray-600">
-        <p className="italic">Cartera de inversión a largo plazo</p>
+      {/* Información adicional */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        <div style={{ 
+          textAlign: 'center', 
+          padding: '0.75rem', 
+          backgroundColor: '#f0fdf4', 
+          borderRadius: '6px',
+          border: '1px solid #bbf7d0'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#15803d', marginBottom: '0.25rem' }}>
+            Patrimonio
+          </div>
+          <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#166534' }}>
+            ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+          </div>
+        </div>
+        
+        {fechaCreacion && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '0.75rem', 
+            backgroundColor: '#fafafa', 
+            borderRadius: '6px',
+            border: '1px solid #e5e7eb'
+          }}>
+            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+              Creado
+            </div>
+            <div style={{ fontSize: '0.8125rem', fontWeight: '600', color: '#111827' }}>
+              {fechaCreacion.toLocaleDateString('es-AR')}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Descripción */}
+      <div style={{ 
+        textAlign: 'center', 
+        fontSize: '0.8125rem', 
+        color: '#6b7280',
+        fontStyle: 'italic',
+        padding: '0.5rem'
+      }}>
+        <i className="fas fa-seedling" style={{ marginRight: '0.375rem' }} />
+        Inversión estratégica a largo plazo
       </div>
     </div>
   );
@@ -127,36 +292,123 @@ const LargoPlazoCard = ({ data }) => {
 const ObjetivoCard = ({ data }) => {
   const { metadata, valor_total_fondo, rendimiento_real, tipo_cartera } = data;
   const monto_objetivo = metadata?.monto_objetivo || 0;
-  const moneda = metadata?.moneda || 'USD';
+  const moneda = metadata?.moneda || 'ARS';
   const fecha_objetivo = metadata?.fecha_objetivo ? new Date(metadata.fecha_objetivo) : null;
   const diasRestantes = fecha_objetivo ? Math.ceil((fecha_objetivo - new Date()) / (1000 * 60 * 60 * 24)) : 0;
-  const nombre_cartera = tipo_cartera?.descripcion || 'Objetivo';
+  const nombre_objetivo = metadata?.nombre_objetivo || 'Meta financiera';
   
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-purple-50 p-3 rounded-lg">
-          <p className="text-xs text-purple-600 mb-1">Objetivo {moneda}</p>
-          <p className="font-semibold text-purple-900 text-sm">${Number(monto_objetivo).toFixed(2)}</p>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Objetivo y valor actual */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        <div style={{ 
+          backgroundColor: '#faf5ff', 
+          padding: '0.875rem', 
+          borderRadius: '8px',
+          border: '1px solid #e9d5ff'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#7e22ce', fontWeight: '500', marginBottom: '0.25rem' }}>
+            <i className="fas fa-bullseye" style={{ marginRight: '0.375rem' }} />
+            {nombre_objetivo}
+          </div>
+          <div style={{ fontSize: '1rem', fontWeight: '700', color: '#6b21a8' }}>
+            {moneda}${Number(monto_objetivo).toLocaleString('es-AR')}
+          </div>
           {fecha_objetivo && (
-            <p className="text-xs text-purple-600 font-medium mt-1">
-              {diasRestantes > 0 ? `Faltan ${diasRestantes} días` : '⚠️ Vencido'}
-            </p>
+            <div style={{ 
+              fontSize: '0.6875rem', 
+              fontWeight: '600',
+              color: diasRestantes > 0 ? (diasRestantes > 30 ? '#7e22ce' : '#ea580c') : '#dc2626',
+              marginTop: '0.25rem'
+            }}>
+              {diasRestantes > 0 ? (
+                <>
+                  <i className="fas fa-clock" style={{ marginRight: '0.25rem' }} />
+                  {diasRestantes} días restantes
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-exclamation-triangle" style={{ marginRight: '0.25rem' }} />
+                  Vencido
+                </>
+              )}
+            </div>
           )}
         </div>
-        <div className="bg-blue-50 p-3 rounded-lg">
-          <p className="text-xs text-blue-600 mb-1">Fecha Objetivo</p>
-          <p className="font-semibold text-blue-900 text-xs">
-            {fecha_objetivo ? fecha_objetivo.toLocaleDateString() : 'N/A'}
-          </p>
+        
+        <div style={{ 
+          backgroundColor: '#ecfdf5', 
+          padding: '0.875rem', 
+          borderRadius: '8px',
+          border: '1px solid #a7f3d0'
+        }}>
+          <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: '500', marginBottom: '0.25rem' }}>
+            Patrimonio Actual
+          </div>
+          <div style={{ fontSize: '1rem', fontWeight: '700', color: '#065f46' }}>
+            {moneda}${Number(valor_total_fondo || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
         </div>
       </div>
 
-      <div className="text-center p-2 bg-gray-50 rounded">
-        <p className="text-xs text-gray-600">Rendimiento Real</p>
-        <p className={`font-semibold ${rendimiento_real >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+      {/* Fecha objetivo */}
+      {fecha_objetivo && (
+        <div style={{ 
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0.75rem', 
+          backgroundColor: '#f0f9ff', 
+          borderRadius: '6px',
+          border: '1px solid #bae6fd'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#0369a1', marginBottom: '0.125rem' }}>
+              Fecha Objetivo
+            </div>
+            <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#0c4a6e' }}>
+              {fecha_objetivo.toLocaleDateString('es-AR', { 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric' 
+              })}
+            </div>
+          </div>
+          <div style={{ 
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            backgroundColor: diasRestantes > 30 ? '#0ea5e9' : diasRestantes > 0 ? '#f97316' : '#dc2626',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <i 
+              className={`fas fa-${diasRestantes > 30 ? 'check' : diasRestantes > 0 ? 'hourglass-half' : 'times'}`} 
+              style={{ color: '#fff', fontSize: '1rem' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Rendimiento */}
+      <div style={{ 
+        textAlign: 'center', 
+        padding: '0.75rem', 
+        backgroundColor: '#fafafa', 
+        borderRadius: '6px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+          Rendimiento Real
+        </div>
+        <div style={{ 
+          fontSize: '1rem', 
+          fontWeight: '600', 
+          color: rendimiento_real >= 0 ? '#15803d' : '#dc2626'
+        }}>
           {Number(rendimiento_real || 0).toFixed(2)}%
-        </p>
+        </div>
       </div>
     </div>
   );
@@ -179,72 +431,178 @@ export default function EstrategiaCard({ data, onAsignar, onVerDetalle }) {
     }
   }, [estrategia]);
 
-  const getIcon = () => {
-    switch (estrategia) {
-      case 'jubilacion': return Briefcase;
-      case 'viajes': return Plane;
-      case 'largo_plazo': return TrendingUp;
-      case 'objetivo': return Target;
-      default: return Briefcase;
-    }
+  const getIconAndColor = () => {
+    const configs = {
+      'jubilacion': { icon: 'umbrella-beach', color: '#10b981' },
+      'viajes': { icon: 'plane-departure', color: '#f97316' },
+      'largo_plazo': { icon: 'chart-line', color: '#3b82f6' },
+      'objetivo': { icon: 'bullseye', color: '#a855f7' }
+    };
+    return configs[estrategia] || { icon: 'wallet', color: '#6b7280' };
   };
 
-  const getColor = () => {
-    const colorMap = {
-      'jubilacion': '#4CAF50',
-      'viajes': '#FF9800',
-      'largo_plazo': '#2196F3',
-      'objetivo': '#9C27B0'
+  const getEstrategiaNombre = () => {
+    const nombres = {
+      'jubilacion': 'Jubilación',
+      'viajes': 'Viajes',
+      'largo_plazo': 'Largo Plazo',
+      'objetivo': 'Objetivo'
     };
-    return data.tipo_cartera?.color || colorMap[estrategia] || '#3b82f6';
+    return nombres[estrategia] || 'General';
   };
+
+  const { icon, color } = getIconAndColor();
+  const nombre_cartera = data.tipo_cartera?.descripcion || getEstrategiaNombre();
 
   if (!CardComponent) {
     // Si no hay estrategia definida, mostrar card genérica
     return (
-      <div className="bg-white rounded-lg shadow hover:shadow-lg transition-all border border-gray-200 p-6">
-        <div className="text-center text-gray-500">
-          <p className="text-sm">Cartera sin estrategia definida</p>
-          <p className="text-xs mt-2">ID: {data.id_fondo}</p>
+      <div style={{
+        backgroundColor: '#fff',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        border: '1px solid #e5e7eb',
+        padding: '1.5rem',
+        transition: 'all 0.2s'
+      }}>
+        <div style={{ textAlign: 'center', color: '#9ca3af' }}>
+          <i className="fas fa-folder-open" style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#d1d5db' }} />
+          <p style={{ fontSize: '0.875rem', margin: '0.5rem 0' }}>Estrategia no configurada</p>
+          <p style={{ fontSize: '0.75rem', color: '#d1d5db' }}>Fondo ID: {data.id_fondo}</p>
         </div>
       </div>
     );
   }
 
-  const Icon = getIcon();
-  const color = getColor();
-  const nombre_cartera = data.tipo_cartera?.descripcion || `Cartera ${data.id_fondo}`;
-
   return (
     <div 
-      className="bg-white rounded-lg shadow hover:shadow-lg transition-all border-2 p-6"
-      style={{ borderColor: color }}
+      style={{
+        backgroundColor: '#fff',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        border: `2px solid ${color}`,
+        padding: '1.5rem',
+        transition: 'all 0.2s',
+        cursor: 'pointer'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+        e.currentTarget.style.transform = 'translateY(-2px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        e.currentTarget.style.transform = 'translateY(0)';
+      }}
     >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="p-2 rounded-lg" style={{ backgroundColor: `${color}20` }}>
-          <Icon className="h-5 w-5" style={{ color }} />
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+        <div style={{ 
+          padding: '0.625rem', 
+          borderRadius: '10px', 
+          backgroundColor: `${color}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '42px',
+          height: '42px'
+        }}>
+          <i className={`fas fa-${icon}`} style={{ color, fontSize: '1.25rem' }} />
         </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-800">{nombre_cartera}</h3>
-          <p className="text-xs text-gray-500">ID: {data.id_fondo}</p>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ 
+            margin: 0, 
+            fontSize: '1.0625rem', 
+            fontWeight: '600', 
+            color: '#111827',
+            marginBottom: '0.125rem'
+          }}>
+            {nombre_cartera}
+          </h3>
+          <p style={{ 
+            margin: 0, 
+            fontSize: '0.75rem', 
+            color: '#9ca3af',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.25rem'
+          }}>
+            <i className="fas fa-circle" style={{ fontSize: '0.375rem', color }} />
+            {getEstrategiaNombre()}
+          </p>
         </div>
       </div>
 
+      {/* Contenido específico de la estrategia */}
       <CardComponent data={data} />
       
-      <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
+      {/* Botones de acción */}
+      <div style={{ 
+        marginTop: '1.25rem', 
+        paddingTop: '1.25rem', 
+        borderTop: '1px solid #e5e7eb',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.625rem'
+      }}>
         <button
           onClick={() => onAsignar(data)}
-          className="w-full px-4 py-2 text-white rounded-lg transition text-sm font-medium hover:opacity-90"
-          style={{ backgroundColor: color }}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            backgroundColor: color,
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '0.875rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
         >
+          <i className="fas fa-coins" />
           Asignar Liquidez
         </button>
         {onVerDetalle && (
           <button
             onClick={() => onVerDetalle(data)}
-            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg transition text-sm font-medium hover:bg-gray-200"
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              backgroundColor: '#f3f4f6',
+              color: '#374151',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#e5e7eb';
+              e.currentTarget.style.borderColor = '#9ca3af';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#f3f4f6';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
           >
+            <i className="fas fa-eye" />
             Ver Detalle
           </button>
         )}
