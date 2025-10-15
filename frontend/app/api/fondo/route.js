@@ -64,16 +64,18 @@ const metadataLargoPlazoSchema = z.object({
 
 const metadataViajesSchema = z.object({
   estrategia: z.literal('viajes'),
-  monto_objetivo: z.coerce.number().positive(),
-  moneda: z.enum(['ARS', 'USD']),
+  monto_objetivo_usd: z.coerce.number().positive(),
+  tipo_cambio: z.coerce.number().positive().optional().nullable(),
+  monto_objetivo_ars: z.coerce.number().positive().optional().nullable(),
   comentario: z.string().optional().nullable(),
 });
 
 const metadataObjetivoSchema = z.object({
   estrategia: z.literal('objetivo'),
   fecha_objetivo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  monto_objetivo: z.coerce.number().positive(),
-  moneda: z.enum(['ARS', 'USD']),
+  monto_objetivo_usd: z.coerce.number().positive(),
+  tipo_cambio: z.coerce.number().positive().optional().nullable(),
+  monto_objetivo_ars: z.coerce.number().positive().optional().nullable(),
   comentario: z.string().optional().nullable(),
 });
 

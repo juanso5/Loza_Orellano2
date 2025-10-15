@@ -365,8 +365,8 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span>Tipo</span>
               <select value={tipo} onChange={(e) => setTipo(e.target.value)} required>
-                <option value="Ingreso">Ingreso (Compra)</option>
-                <option value="Egreso">Egreso (Venta)</option>
+                <option value="Ingreso">Compra</option>
+                <option value="Egreso">Venta</option>
               </select>
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

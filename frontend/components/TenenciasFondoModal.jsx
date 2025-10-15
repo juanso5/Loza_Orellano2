@@ -63,6 +63,13 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
   
   const nombreFondo = fondo?.nombre || fondo?.tipo_cartera?.descripcion || `Fondo #${fondo?.id_fondo}`;
   
+  // Detectar si es estrategia con tipo de cambio (viajes u objetivo)
+  const estrategia = fondo?.metadata?.estrategia;
+  const tipoCambio = fondo?.metadata?.tipo_cambio;
+  const mostrarDualCurrency = (estrategia === 'viajes' || estrategia === 'objetivo') && tipoCambio > 0;
+  const liquidezUSD = fondo?.liquidez_disponible || 0;
+  const liquidezARS = mostrarDualCurrency ? liquidezUSD * tipoCambio : 0;
+  
   return (
     <div 
       className="modal" 
@@ -90,7 +97,8 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'flex-end',
-              gap: '0.25rem'
+              gap: '0.25rem',
+              minWidth: mostrarDualCurrency ? '200px' : 'auto'
             }}>
               <div style={{ 
                 fontSize: '0.7rem', 
@@ -107,9 +115,31 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
                 color: '#166534',
                 lineHeight: '1'
               }}>
-                ${Number(fondo.liquidez_disponible).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${Number(liquidezUSD).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <div style={{ fontSize: '0.65rem', color: '#16a34a', fontWeight: '600' }}>USD</div>
+              
+              {mostrarDualCurrency && (
+                <>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '1px', 
+                    backgroundColor: '#86efac', 
+                    margin: '0.25rem 0' 
+                  }} />
+                  <div style={{ 
+                    fontSize: '0.9375rem', 
+                    fontWeight: '700', 
+                    color: '#166534',
+                    lineHeight: '1'
+                  }}>
+                    ${Number(liquidezARS).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </div>
+                  <div style={{ fontSize: '0.6rem', color: '#16a34a', fontWeight: '500' }}>
+                    ARS (TC: ${tipoCambio.toLocaleString('es-AR')})
+                  </div>
+                </>
+              )}
             </div>
           )}
           

@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 
-// Componentes específicos para cada estrategia
+// Componentes específicos para cada estrategia - Updated
 const JubilacionCard = ({ data }) => {
   const { metadata, fecha_alta, rend_esperado, valor_total_fondo, rendimiento_real } = data;
   const fechaCreacion = new Date(fecha_alta);
@@ -89,12 +89,14 @@ const JubilacionCard = ({ data }) => {
 
 const ViajesCard = ({ data }) => {
   const { metadata, valor_total_fondo, rendimiento_real, tipo_cartera } = data;
-  const monto_objetivo = metadata?.monto_objetivo || 0;
-  const moneda = metadata?.moneda || 'USD';
-  const progreso = monto_objetivo > 0 ? (valor_total_fondo / monto_objetivo) * 100 : 0;
-  const destino = metadata?.destino || 'Viaje';
   
-  const getProgressColor = () => {
+  // Soporta ambos formatos: legacy (monto_objetivo + moneda) y nuevo (monto_objetivo_usd + tipo_cambio)
+  const monto_objetivo_usd = metadata?.monto_objetivo_usd || (metadata?.moneda === 'USD' ? metadata?.monto_objetivo : 0) || 0;
+  const tipo_cambio = metadata?.tipo_cambio || null;
+  const monto_objetivo_ars = metadata?.monto_objetivo_ars || (tipo_cambio ? monto_objetivo_usd * tipo_cambio : 0);
+  const destino = metadata?.destino || metadata?.comentario || 'Viaje';
+  
+  const getProgressColor = (progreso) => {
     if (progreso >= 100) return '#22c55e';
     if (progreso >= 75) return '#84cc16';
     if (progreso >= 50) return '#eab308';
@@ -104,81 +106,150 @@ const ViajesCard = ({ data }) => {
   
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Destino y Patrimonio */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-        <div style={{ 
-          backgroundColor: '#fff7ed', 
-          padding: '0.875rem', 
-          borderRadius: '8px',
-          border: '1px solid #fed7aa'
-        }}>
-          <div style={{ fontSize: '0.75rem', color: '#c2410c', fontWeight: '500', marginBottom: '0.25rem' }}>
-            <i className="fas fa-map-marker-alt" style={{ marginRight: '0.375rem' }} />
-            Destino
-          </div>
-          <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#7c2d12' }}>
-            {destino}
-          </div>
-          <div style={{ fontSize: '0.6875rem', color: '#ea580c', marginTop: '0.125rem' }}>
-            Objetivo: ${Number(monto_objetivo).toLocaleString('es-AR')}
-          </div>
+      {/* Objetivo */}
+      <div style={{ 
+        backgroundColor: '#fff7ed', 
+        padding: '1rem', 
+        borderRadius: '8px',
+        border: '1px solid #fed7aa'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#c2410c', fontWeight: '500', marginBottom: '0.5rem' }}>
+          <i className="fas fa-bullseye" style={{ marginRight: '0.375rem' }} />
+          OBJETIVO - {destino}
         </div>
         
-        <div style={{ 
-          backgroundColor: '#faf5ff', 
-          padding: '0.875rem', 
-          borderRadius: '8px',
-          border: '1px solid #e9d5ff'
-        }}>
-          <div style={{ fontSize: '0.75rem', color: '#7e22ce', fontWeight: '500', marginBottom: '0.25rem' }}>
-            Patrimonio ({moneda})
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* USD */}
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#9a3412', fontWeight: '500', marginBottom: '0.125rem' }}>
+              💵 USD
+            </div>
+            <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#7c2d12', lineHeight: '1.2' }}>
+              ${Number(monto_objetivo_usd).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </div>
           </div>
-          <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#6b21a8' }}>
-            ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
+          
+          {/* ARS (si hay TC) */}
+          {monto_objetivo_ars > 0 && tipo_cambio && (
+            <div>
+              <div style={{ fontSize: '0.65rem', color: '#9a3412', fontWeight: '500', marginBottom: '0.125rem' }}>
+                💵 ARS
+              </div>
+              <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#7c2d12', lineHeight: '1.2' }}>
+                ${Number(monto_objetivo_ars).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </div>
+              <div style={{ fontSize: '0.6rem', color: '#c2410c', marginTop: '0.125rem' }}>
+                TC: ${tipo_cambio.toLocaleString('es-AR')}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Barra de progreso */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: '0.875rem', color: '#6b7280', fontWeight: '500' }}>
-            <i className="fas fa-chart-line" style={{ marginRight: '0.375rem' }} />
-            Progreso del objetivo
-          </span>
-          <span style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#111827' }}>
-            {progreso.toFixed(1)}%
-          </span>
+      {/* Patrimonio */}
+      <div style={{ 
+        backgroundColor: '#ecfdf5', 
+        padding: '1rem', 
+        borderRadius: '8px',
+        border: '1px solid #a7f3d0'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: '500', marginBottom: '0.5rem' }}>
+          <i className="fas fa-wallet" style={{ marginRight: '0.375rem' }} />
+          PATRIMONIO ACTUAL
         </div>
-        <div style={{ 
-          width: '100%', 
-          backgroundColor: '#e5e7eb', 
-          borderRadius: '9999px', 
-          height: '14px', 
-          overflow: 'hidden',
-          border: '1px solid #d1d5db'
-        }}>
-          <div
-            style={{ 
-              height: '14px', 
-              borderRadius: '9999px', 
-              transition: 'width 0.3s ease', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'flex-end', 
-              paddingRight: '6px',
-              backgroundColor: getProgressColor(),
-              width: `${Math.min(progreso, 100)}%`
-            }}
-          >
-            {progreso >= 15 && (
-              <span style={{ fontSize: '0.6875rem', fontWeight: '700', color: '#fff' }}>
-                ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
-              </span>
-            )}
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* USD */}
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#065f46', fontWeight: '500', marginBottom: '0.125rem' }}>
+              💰 USD
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#047857', lineHeight: '1.2' }}>
+              ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
+          
+          {/* ARS (si hay TC) */}
+          {tipo_cambio > 0 && (
+            <div>
+              <div style={{ fontSize: '0.65rem', color: '#065f46', fontWeight: '500', marginBottom: '0.125rem' }}>
+                💰 ARS (equiv.)
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#047857', lineHeight: '1.2' }}>
+                ${Number((valor_total_fondo || 0) * tipo_cambio).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Barras de progreso por moneda */}
+      {monto_objetivo_usd > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: '500' }}>
+              <i className="fas fa-chart-line" style={{ marginRight: '0.375rem' }} />
+              Progreso USD
+            </span>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+              {((valor_total_fondo / monto_objetivo_usd) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div style={{ 
+            width: '100%', 
+            backgroundColor: '#e5e7eb', 
+            borderRadius: '9999px', 
+            height: '12px', 
+            overflow: 'hidden',
+            border: '1px solid #d1d5db'
+          }}>
+            <div
+              style={{ 
+                height: '12px', 
+                borderRadius: '9999px', 
+                transition: 'width 0.3s ease',
+                backgroundColor: getProgressColor((valor_total_fondo / monto_objetivo_usd) * 100),
+                width: `${Math.min((valor_total_fondo / monto_objetivo_usd) * 100, 100)}%`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {monto_objetivo_ars > 0 && tipo_cambio && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: '500' }}>
+              <i className="fas fa-chart-line" style={{ marginRight: '0.375rem' }} />
+              Progreso ARS
+            </span>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+              {((valor_total_fondo * tipo_cambio / monto_objetivo_ars) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div style={{ 
+            width: '100%', 
+            backgroundColor: '#e5e7eb', 
+            borderRadius: '9999px', 
+            height: '12px', 
+            overflow: 'hidden',
+            border: '1px solid #d1d5db'
+          }}>
+            <div
+              style={{ 
+                height: '12px', 
+                borderRadius: '9999px', 
+                transition: 'width 0.3s ease',
+                backgroundColor: getProgressColor((valor_total_fondo * tipo_cambio / monto_objetivo_ars) * 100),
+                width: `${Math.min((valor_total_fondo * tipo_cambio / monto_objetivo_ars) * 100, 100)}%`
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '0.6875rem', color: '#9ca3af', fontStyle: 'italic', textAlign: 'right' }}>
+            * TC definido: 1 USD = ${tipo_cambio.toLocaleString('es-AR')} ARS
+          </div>
+        </div>
+      )}
 
       {/* Rendimiento */}
       <div style={{ 
@@ -291,65 +362,202 @@ const LargoPlazoCard = ({ data }) => {
 
 const ObjetivoCard = ({ data }) => {
   const { metadata, valor_total_fondo, rendimiento_real, tipo_cartera } = data;
-  const monto_objetivo = metadata?.monto_objetivo || 0;
-  const moneda = metadata?.moneda || 'ARS';
+  
+  // Soporta ambos formatos: legacy (monto_objetivo + moneda) y nuevo (monto_objetivo_usd + tipo_cambio)
+  const monto_objetivo_usd = metadata?.monto_objetivo_usd || (metadata?.moneda === 'USD' ? metadata?.monto_objetivo : 0) || 0;
+  const tipo_cambio = metadata?.tipo_cambio || null;
+  const monto_objetivo_ars = metadata?.monto_objetivo_ars || (tipo_cambio ? monto_objetivo_usd * tipo_cambio : 0);
+  
   const fecha_objetivo = metadata?.fecha_objetivo ? new Date(metadata.fecha_objetivo) : null;
   const diasRestantes = fecha_objetivo ? Math.ceil((fecha_objetivo - new Date()) / (1000 * 60 * 60 * 24)) : 0;
-  const nombre_objetivo = metadata?.nombre_objetivo || 'Meta financiera';
+  const nombre_objetivo = metadata?.nombre_objetivo || metadata?.comentario || 'Meta financiera';
+  
+  const getProgressColor = (progreso) => {
+    if (progreso >= 100) return '#22c55e';
+    if (progreso >= 75) return '#84cc16';
+    if (progreso >= 50) return '#eab308';
+    if (progreso >= 25) return '#f97316';
+    return '#a855f7';
+  };
   
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-      {/* Objetivo y valor actual */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+      {/* Fecha y días restantes */}
+      {fecha_objetivo && (
         <div style={{ 
-          backgroundColor: '#faf5ff', 
-          padding: '0.875rem', 
-          borderRadius: '8px',
-          border: '1px solid #e9d5ff'
+          padding: '0.75rem',
+          backgroundColor: diasRestantes > 30 ? '#eff6ff' : diasRestantes > 0 ? '#fff7ed' : '#fee2e2',
+          border: `1px solid ${diasRestantes > 30 ? '#bfdbfe' : diasRestantes > 0 ? '#fed7aa' : '#fecaca'}`,
+          borderRadius: '6px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          <div style={{ fontSize: '0.75rem', color: '#7e22ce', fontWeight: '500', marginBottom: '0.25rem' }}>
-            <i className="fas fa-bullseye" style={{ marginRight: '0.375rem' }} />
-            {nombre_objetivo}
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#6b7280', fontWeight: '500', marginBottom: '0.125rem' }}>
+              📅 FECHA OBJETIVO
+            </div>
+            <div style={{ fontSize: '0.875rem', fontWeight: '700', color: '#111827' }}>
+              {fecha_objetivo.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
           </div>
-          <div style={{ fontSize: '1rem', fontWeight: '700', color: '#6b21a8' }}>
-            {moneda}${Number(monto_objetivo).toLocaleString('es-AR')}
+          <div style={{ 
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            backgroundColor: diasRestantes > 30 ? '#dbeafe' : diasRestantes > 0 ? '#fed7aa' : '#fecaca',
+            fontSize: '0.75rem',
+            fontWeight: '700',
+            color: diasRestantes > 30 ? '#1e40af' : diasRestantes > 0 ? '#9a3412' : '#991b1b'
+          }}>
+            {diasRestantes > 0 ? `${diasRestantes} días` : 'Vencido'}
           </div>
-          {fecha_objetivo && (
-            <div style={{ 
-              fontSize: '0.6875rem', 
-              fontWeight: '600',
-              color: diasRestantes > 0 ? (diasRestantes > 30 ? '#7e22ce' : '#ea580c') : '#dc2626',
-              marginTop: '0.25rem'
-            }}>
-              {diasRestantes > 0 ? (
-                <>
-                  <i className="fas fa-clock" style={{ marginRight: '0.25rem' }} />
-                  {diasRestantes} días restantes
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-exclamation-triangle" style={{ marginRight: '0.25rem' }} />
-                  Vencido
-                </>
-              )}
+        </div>
+      )}
+
+      {/* Objetivo */}
+      <div style={{ 
+        backgroundColor: '#faf5ff', 
+        padding: '1rem', 
+        borderRadius: '8px',
+        border: '1px solid #e9d5ff'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#7e22ce', fontWeight: '500', marginBottom: '0.5rem' }}>
+          <i className="fas fa-bullseye" style={{ marginRight: '0.375rem' }} />
+          OBJETIVO - {nombre_objetivo}
+        </div>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* USD */}
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#6b21a8', fontWeight: '500', marginBottom: '0.125rem' }}>
+              💵 USD
+            </div>
+            <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#7e22ce', lineHeight: '1.2' }}>
+              ${Number(monto_objetivo_usd).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            </div>
+          </div>
+          
+          {/* ARS (si hay TC) */}
+          {monto_objetivo_ars > 0 && tipo_cambio && (
+            <div>
+              <div style={{ fontSize: '0.65rem', color: '#6b21a8', fontWeight: '500', marginBottom: '0.125rem' }}>
+                💵 ARS
+              </div>
+              <div style={{ fontSize: '1.125rem', fontWeight: '700', color: '#7e22ce', lineHeight: '1.2' }}>
+                ${Number(monto_objetivo_ars).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </div>
+              <div style={{ fontSize: '0.6rem', color: '#9333ea', marginTop: '0.125rem' }}>
+                TC: ${tipo_cambio.toLocaleString('es-AR')}
+              </div>
             </div>
           )}
         </div>
+      </div>
+
+      {/* Patrimonio */}
+      <div style={{ 
+        backgroundColor: '#ecfdf5', 
+        padding: '1rem', 
+        borderRadius: '8px',
+        border: '1px solid #a7f3d0'
+      }}>
+        <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: '500', marginBottom: '0.5rem' }}>
+          <i className="fas fa-wallet" style={{ marginRight: '0.375rem' }} />
+          PATRIMONIO ACTUAL
+        </div>
         
-        <div style={{ 
-          backgroundColor: '#ecfdf5', 
-          padding: '0.875rem', 
-          borderRadius: '8px',
-          border: '1px solid #a7f3d0'
-        }}>
-          <div style={{ fontSize: '0.75rem', color: '#047857', fontWeight: '500', marginBottom: '0.25rem' }}>
-            Patrimonio Actual
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {/* USD */}
+          <div>
+            <div style={{ fontSize: '0.65rem', color: '#065f46', fontWeight: '500', marginBottom: '0.125rem' }}>
+              💰 USD
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#047857', lineHeight: '1.2' }}>
+              ${Number(valor_total_fondo || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           </div>
-          <div style={{ fontSize: '1rem', fontWeight: '700', color: '#065f46' }}>
-            {moneda}${Number(valor_total_fondo || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
+          
+          {/* ARS (si hay TC) */}
+          {tipo_cambio > 0 && (
+            <div>
+              <div style={{ fontSize: '0.65rem', color: '#065f46', fontWeight: '500', marginBottom: '0.125rem' }}>
+                💰 ARS (equiv.)
+              </div>
+              <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#047857', lineHeight: '1.2' }}>
+                ${Number((valor_total_fondo || 0) * tipo_cambio).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Barras de progreso por moneda */}
+      {monto_objetivo_usd > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: '500' }}>
+              <i className="fas fa-chart-line" style={{ marginRight: '0.375rem' }} />
+              Progreso USD
+            </span>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+              {((valor_total_fondo / monto_objetivo_usd) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div style={{ 
+            width: '100%', 
+            backgroundColor: '#e5e7eb', 
+            borderRadius: '9999px', 
+            height: '12px', 
+            overflow: 'hidden',
+            border: '1px solid #d1d5db'
+          }}>
+            <div
+              style={{ 
+                height: '12px', 
+                borderRadius: '9999px', 
+                transition: 'width 0.3s ease',
+                backgroundColor: getProgressColor((valor_total_fondo / monto_objetivo_usd) * 100),
+                width: `${Math.min((valor_total_fondo / monto_objetivo_usd) * 100, 100)}%`
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {monto_objetivo_ars > 0 && tipo_cambio && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8125rem', color: '#6b7280', fontWeight: '500' }}>
+              <i className="fas fa-chart-line" style={{ marginRight: '0.375rem' }} />
+              Progreso ARS
+            </span>
+            <span style={{ fontSize: '0.875rem', fontWeight: '600', color: '#111827' }}>
+              {((valor_total_fondo * tipo_cambio / monto_objetivo_ars) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div style={{ 
+            width: '100%', 
+            backgroundColor: '#e5e7eb', 
+            borderRadius: '9999px', 
+            height: '12px', 
+            overflow: 'hidden',
+            border: '1px solid #d1d5db'
+          }}>
+            <div
+              style={{ 
+                height: '12px', 
+                borderRadius: '9999px', 
+                transition: 'width 0.3s ease',
+                backgroundColor: getProgressColor((valor_total_fondo * tipo_cambio / monto_objetivo_ars) * 100),
+                width: `${Math.min((valor_total_fondo * tipo_cambio / monto_objetivo_ars) * 100, 100)}%`
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '0.6875rem', color: '#9ca3af', fontStyle: 'italic', textAlign: 'right' }}>
+            * TC definido: 1 USD = ${tipo_cambio.toLocaleString('es-AR')} ARS
+          </div>
+        </div>
+      )}
 
       {/* Fecha objetivo */}
       {fecha_objetivo && (

@@ -287,10 +287,13 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
 
   // VIAJES
   if (categoria === 'viajes') {
-    const montoObjetivo = metadata?.monto_objetivo || 0;
-    const progreso = montoObjetivo > 0 ? (patrimonio / montoObjetivo) * 100 : 0;
-    const monedaSimbolo = metadata?.moneda === 'USD' ? '$' : 'AR$';
-    const destino = metadata?.destino || metadata?.nombre || 'Viaje';
+    // Soporte para USD + TC
+    const montoObjetivoUSD = metadata?.monto_objetivo_usd || (metadata?.moneda === 'USD' ? metadata?.monto_objetivo : 0) || 0;
+    const tipoCambio = metadata?.tipo_cambio || null;
+    const montoObjetivoARS = metadata?.monto_objetivo_ars || (tipoCambio ? montoObjetivoUSD * tipoCambio : 0);
+    const patrimonioARS = tipoCambio ? patrimonio * tipoCambio : 0;
+    const progreso = montoObjetivoUSD > 0 ? (patrimonio / montoObjetivoUSD) * 100 : 0;
+    const destino = metadata?.destino || metadata?.comentario || metadata?.nombre || 'Viaje';
     
     // Color dinámico de la barra según progreso
     const getProgressColor = () => {
@@ -415,62 +418,134 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
               padding: '16px', 
               backgroundColor: '#fef3c7',
               borderRadius: '10px',
-              border: '1px solid #fde68a',
-              textAlign: 'center'
+              border: '1px solid #fde68a'
             }}>
               <div style={{ 
                 fontSize: '0.6875rem', 
                 color: '#92400e', 
-                marginBottom: '6px',
+                marginBottom: '8px',
                 fontWeight: '600',
                 textTransform: 'uppercase',
-                letterSpacing: '0.03em'
+                letterSpacing: '0.03em',
+                textAlign: 'center'
               }}>
                 Objetivo
               </div>
               <div style={{ 
-                fontSize: '1.25rem', 
+                fontSize: '1rem', 
                 fontWeight: '700', 
                 color: '#78350f',
-                wordBreak: 'break-all'
+                textAlign: 'center',
+                marginBottom: tipoCambio && montoObjetivoARS > 0 ? '6px' : '0'
               }}>
-                {monedaSimbolo}{Number(montoObjetivo).toLocaleString('es-AR', { maximumFractionDigits: 0 })}
+                ${Number(montoObjetivoUSD).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </div>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#92400e', 
+                fontWeight: '600',
+                textAlign: 'center'
+              }}>
+                USD
+              </div>
+              {tipoCambio && montoObjetivoARS > 0 && (
+                <>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '1px', 
+                    backgroundColor: '#fde68a', 
+                    margin: '8px 0' 
+                  }} />
+                  <div style={{ 
+                    fontSize: '0.9375rem', 
+                    fontWeight: '700', 
+                    color: '#78350f',
+                    textAlign: 'center',
+                    marginBottom: '4px'
+                  }}>
+                    AR${Number(montoObjetivoARS).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.625rem', 
+                    color: '#92400e',
+                    textAlign: 'center'
+                  }}>
+                    TC: ${tipoCambio.toLocaleString('es-AR')}
+                  </div>
+                </>
+              )}
             </div>
 
             <div style={{ 
               padding: '16px', 
               backgroundColor: '#dcfce7',
               borderRadius: '10px',
-              border: '1px solid #86efac',
-              textAlign: 'center'
+              border: '1px solid #86efac'
             }}>
               <div style={{ 
                 fontSize: '0.6875rem', 
                 color: '#15803d', 
-                marginBottom: '6px',
+                marginBottom: '8px',
                 fontWeight: '600',
                 textTransform: 'uppercase',
-                letterSpacing: '0.03em'
+                letterSpacing: '0.03em',
+                textAlign: 'center'
               }}>
                 Patrimonio
               </div>
               <div style={{ 
-                fontSize: '1.125rem', 
+                fontSize: '1rem', 
                 fontWeight: '700', 
                 color: '#166534',
-                wordBreak: 'break-all'
+                textAlign: 'center',
+                marginBottom: '4px'
               }}>
-                {monedaSimbolo}{formatNumber(patrimonio)}
+                ${formatNumber(patrimonio)}
+              </div>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#15803d', 
+                fontWeight: '600',
+                textAlign: 'center',
+                marginBottom: tipoCambio && patrimonioARS > 0 ? '8px' : '4px'
+              }}>
+                USD
               </div>
               <div style={{ 
                 fontSize: '0.75rem', 
                 fontWeight: '600',
-                marginTop: '4px',
-                color: totalReturn >= 0 ? '#15803d' : '#dc2626'
+                color: totalReturn >= 0 ? '#15803d' : '#dc2626',
+                textAlign: 'center',
+                marginBottom: tipoCambio && patrimonioARS > 0 ? '8px' : '0'
               }}>
                 {totalReturn >= 0 ? '↑' : '↓'} {(totalReturn * 100).toFixed(2)}%
               </div>
+              {tipoCambio && patrimonioARS > 0 && (
+                <>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '1px', 
+                    backgroundColor: '#86efac', 
+                    margin: '8px 0' 
+                  }} />
+                  <div style={{ 
+                    fontSize: '0.9375rem', 
+                    fontWeight: '700', 
+                    color: '#166534',
+                    textAlign: 'center',
+                    marginBottom: '4px'
+                  }}>
+                    AR${Number(patrimonioARS).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.625rem', 
+                    color: '#15803d',
+                    textAlign: 'center'
+                  }}>
+                    Equiv. al TC
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -672,8 +747,12 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
     const objetivo = new Date(metadata?.fecha_objetivo);
     const diff = objetivo - hoy;
     const diasRestantes = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    const montoObjetivo = metadata?.monto_objetivo || 0;
-    const monedaSimbolo = metadata?.moneda === 'USD' ? '$' : 'AR$';
+    
+    // Soporte para USD + TC
+    const montoObjetivoUSD = metadata?.monto_objetivo_usd || (metadata?.moneda === 'USD' ? metadata?.monto_objetivo : 0) || 0;
+    const tipoCambio = metadata?.tipo_cambio || null;
+    const montoObjetivoARS = metadata?.monto_objetivo_ars || (tipoCambio ? montoObjetivoUSD * tipoCambio : 0);
+    const patrimonioARS = tipoCambio ? patrimonio * tipoCambio : 0;
     
     return (
       <>
@@ -782,14 +861,13 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
             </div>
           </div>
 
-          {/* Grid - 3 items */}
+          {/* Grid - 2 items */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div style={{ 
               padding: '16px', 
               backgroundColor: '#fef3c7',
               borderRadius: '10px',
-              border: '1px solid #fde68a',
-              textAlign: 'center'
+              border: '1px solid #fde68a'
             }}>
               <div style={{ 
                 fontSize: '0.6875rem', 
@@ -797,26 +875,61 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
                 marginBottom: '8px',
                 fontWeight: '600',
                 textTransform: 'uppercase',
-                letterSpacing: '0.03em'
+                letterSpacing: '0.03em',
+                textAlign: 'center'
               }}>
                 Objetivo
               </div>
               <div style={{ 
-                fontSize: '1.125rem', 
+                fontSize: '1rem', 
                 fontWeight: '700', 
                 color: '#78350f',
-                wordBreak: 'break-all'
+                textAlign: 'center',
+                marginBottom: tipoCambio && montoObjetivoARS > 0 ? '6px' : '0'
               }}>
-                {monedaSimbolo}{Number(montoObjetivo).toLocaleString('es-AR')}
+                ${Number(montoObjetivoUSD).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </div>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#92400e', 
+                fontWeight: '600',
+                textAlign: 'center'
+              }}>
+                USD
+              </div>
+              {tipoCambio && montoObjetivoARS > 0 && (
+                <>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '1px', 
+                    backgroundColor: '#fde68a', 
+                    margin: '8px 0' 
+                  }} />
+                  <div style={{ 
+                    fontSize: '0.9375rem', 
+                    fontWeight: '700', 
+                    color: '#78350f',
+                    textAlign: 'center',
+                    marginBottom: '4px'
+                  }}>
+                    AR${Number(montoObjetivoARS).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.625rem', 
+                    color: '#92400e',
+                    textAlign: 'center'
+                  }}>
+                    TC: ${tipoCambio.toLocaleString('es-AR')}
+                  </div>
+                </>
+              )}
             </div>
 
             <div style={{ 
               padding: '16px', 
               backgroundColor: '#dcfce7',
               borderRadius: '10px',
-              border: '1px solid #10b98180',
-              textAlign: 'center'
+              border: '1px solid #10b98180'
             }}>
               <div style={{ 
                 fontSize: '0.6875rem', 
@@ -824,22 +937,52 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
                 marginBottom: '8px',
                 fontWeight: '600',
                 textTransform: 'uppercase',
-                letterSpacing: '0.03em'
+                letterSpacing: '0.03em',
+                textAlign: 'center'
               }}>
                 Patrimonio
               </div>
               <div style={{ 
-                fontSize: '1.125rem', 
+                fontSize: '1rem', 
                 fontWeight: '700',
                 color: '#166534',
-                wordBreak: 'break-all'
+                textAlign: 'center',
+                marginBottom: tipoCambio && patrimonioARS > 0 ? '6px' : '4px'
               }}>
-                {monedaSimbolo}{formatNumber(patrimonio)}
+                ${formatNumber(patrimonio)}
               </div>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: '#15803d', 
+                fontWeight: '600',
+                textAlign: 'center'
+              }}>
+                USD
+              </div>
+              {tipoCambio && patrimonioARS > 0 && (
+                <>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '1px', 
+                    backgroundColor: '#10b98180', 
+                    margin: '8px 0' 
+                  }} />
+                  <div style={{ 
+                    fontSize: '0.9375rem', 
+                    fontWeight: '700', 
+                    color: '#166534',
+                    textAlign: 'center',
+                    marginBottom: '4px'
+                  }}>
+                    AR${Number(patrimonioARS).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </div>
+                </>
+              )}
               <div style={{ 
                 fontSize: '0.75rem', 
                 fontWeight: '600',
-                marginTop: '4px',
+                marginTop: '8px',
+                textAlign: 'center',
                 color: totalReturn >= 0 ? '#15803d' : '#dc2626'
               }}>
                 {totalReturn >= 0 ? '↑' : '↓'} {(totalReturn * 100).toFixed(2)}%

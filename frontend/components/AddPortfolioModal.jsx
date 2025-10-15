@@ -121,12 +121,14 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
   } else if (categoriaSeleccionada === 'largo_plazo') {
       // No hay campos obligatorios
   } else if (categoriaSeleccionada === 'viajes') {
-      if (!metadata.monto_objetivo) errs.monto_objetivo = 'Requerido';
-      if (!metadata.moneda) errs.moneda = 'Requerido';
+      if (!metadata.monto_objetivo_usd || parseFloat(metadata.monto_objetivo_usd) <= 0) {
+        errs.monto_objetivo_usd = 'Monto objetivo en USD es requerido';
+      }
   } else if (categoriaSeleccionada === 'objetivo') {
       if (!metadata.fecha_objetivo) errs.fecha_objetivo = 'Requerido';
-      if (!metadata.monto_objetivo) errs.monto_objetivo = 'Requerido';
-      if (!metadata.moneda) errs.moneda = 'Requerido';
+      if (!metadata.monto_objetivo_usd || parseFloat(metadata.monto_objetivo_usd) <= 0) {
+        errs.monto_objetivo_usd = 'Monto objetivo en USD es requerido';
+      }
     }
 
     return errs;
@@ -175,26 +177,47 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
         } else if (categoriaSeleccionada === 'largo_plazo') {
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         } else if (categoriaSeleccionada === 'viajes') {
-          const montoNum = Number(metadata.monto_objetivo);
-          if (!isNaN(montoNum) && montoNum > 0) {
-            metadataParsed.monto_objetivo = montoNum;
-          } else {
-            throw new Error('Monto objetivo es requerido y debe ser mayor a 0');
+          // USD + Tipo de Cambio
+          const usd = parseFloat(metadata.monto_objetivo_usd);
+          if (!usd || usd <= 0) {
+            throw new Error('Monto objetivo en USD es requerido');
           }
-          metadataParsed.moneda = metadata.moneda || 'USD';
+          
+          metadataParsed.monto_objetivo_usd = usd;
+          
+          // Tipo de cambio opcional
+          if (metadata.tipo_cambio) {
+            const tc = parseFloat(metadata.tipo_cambio);
+            if (tc > 0) {
+              metadataParsed.tipo_cambio = tc;
+              metadataParsed.monto_objetivo_ars = usd * tc;
+            }
+          }
+          
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         } else if (categoriaSeleccionada === 'objetivo') {
           if (!metadata.fecha_objetivo) {
             throw new Error('Fecha objetivo es requerida');
           }
           metadataParsed.fecha_objetivo = metadata.fecha_objetivo;
-          const montoNum = Number(metadata.monto_objetivo);
-          if (!isNaN(montoNum) && montoNum > 0) {
-            metadataParsed.monto_objetivo = montoNum;
-          } else {
-            throw new Error('Monto objetivo es requerido y debe ser mayor a 0');
+          
+          // USD + Tipo de Cambio
+          const usd = parseFloat(metadata.monto_objetivo_usd);
+          if (!usd || usd <= 0) {
+            throw new Error('Monto objetivo en USD es requerido');
           }
-          metadataParsed.moneda = metadata.moneda || 'USD';
+          
+          metadataParsed.monto_objetivo_usd = usd;
+          
+          // Tipo de cambio opcional
+          if (metadata.tipo_cambio) {
+            const tc = parseFloat(metadata.tipo_cambio);
+            if (tc > 0) {
+              metadataParsed.tipo_cambio = tc;
+              metadataParsed.monto_objetivo_ars = usd * tc;
+            }
+          }
+          
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         }
         
@@ -373,43 +396,58 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               <div style={{ 
                 padding: 12, 
                 backgroundColor: '#fff7ed', 
-                borderLeft: '4px solid #FF9800',
+                borderLeft: '4px solid #f97316',
                 borderRadius: 4 
               }}>
-                <strong style={{ color: '#e65100' }}>✈️ Cartera Viajes (ARS o USD)</strong>
-                <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#bf360c' }}>
-                  Ahorro para viajes y experiencias
+                <strong style={{ color: '#c2410c' }}>✈️ Cartera Viajes</strong>
+                <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#7c2d12' }}>
+                  Define tu objetivo en USD y el tipo de cambio esperado
                 </p>
               </div>
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span>Moneda <span style={{ color: '#d32f2f' }}>*</span></span>
-                <select
-                  value={metadata.moneda || 'USD'}
-                  onChange={(e) => setMetadata({ ...metadata, moneda: e.target.value })}
-                  required
-                  disabled={loading}
-                >
-                  <option value="USD">USD - Dólares</option>
-                  <option value="ARS">ARS - Pesos</option>
-                </select>
-                {errors.moneda && <small style={{ color: '#d32f2f' }}>{errors.moneda}</small>}
-              </label>
-
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span>Monto Objetivo <span style={{ color: '#d32f2f' }}>*</span></span>
+                <span>💵 Objetivo (USD) <span style={{ color: '#d32f2f' }}>*</span></span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={metadata.monto_objetivo || ''}
-                  onChange={(e) => setMetadata({ ...metadata, monto_objetivo: e.target.value })}
+                  value={metadata.monto_objetivo_usd || ''}
+                  onChange={(e) => setMetadata({ ...metadata, monto_objetivo_usd: e.target.value })}
                   required
                   disabled={loading}
-                  placeholder="10000.00"
+                  placeholder="5000.00"
                 />
-                {errors.monto_objetivo && <small style={{ color: '#d32f2f' }}>{errors.monto_objetivo}</small>}
+                {errors.monto_objetivo_usd && <small style={{ color: '#d32f2f' }}>{errors.monto_objetivo_usd}</small>}
               </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span>� Tipo de Cambio Esperado (USD → ARS)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={metadata.tipo_cambio || ''}
+                  onChange={(e) => setMetadata({ ...metadata, tipo_cambio: e.target.value })}
+                  disabled={loading}
+                  placeholder="1000.00"
+                />
+                <small style={{ color: '#666', fontSize: '0.75rem' }}>
+                  Opcional. Si lo definís, se calculará el equivalente en ARS
+                </small>
+              </label>
+
+              {metadata.monto_objetivo_usd && metadata.tipo_cambio && (
+                <div style={{ 
+                  padding: '0.75rem',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  color: '#065f46'
+                }}>
+                  <strong>Equivalente:</strong> ARS ${(parseFloat(metadata.monto_objetivo_usd) * parseFloat(metadata.tipo_cambio)).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Comentario</span>
@@ -418,7 +456,7 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   onChange={(e) => setMetadata({ ...metadata, comentario: e.target.value })}
                   rows={3}
                   disabled={loading}
-                  placeholder="Ej: Viaje a Europa 2026"
+                  placeholder="Ej: Europa 2026"
                 />
               </label>
             </>
@@ -432,9 +470,9 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                 borderLeft: '4px solid #9C27B0',
                 borderRadius: 4 
               }}>
-                <strong style={{ color: '#6a1b9a' }}>🎯 Cartera Objetivo (ARS o USD)</strong>
+                <strong style={{ color: '#6a1b9a' }}>🎯 Cartera Objetivo</strong>
                 <p style={{ margin: '4px 0 0', fontSize: '0.875rem', color: '#4a148c' }}>
-                  Ahorro con fecha y monto específico
+                  Define tu meta en USD, fecha objetivo y tipo de cambio esperado
                 </p>
               </div>
 
@@ -452,33 +490,48 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               </label>
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span>Moneda <span style={{ color: '#d32f2f' }}>*</span></span>
-                <select
-                  value={metadata.moneda || 'USD'}
-                  onChange={(e) => setMetadata({ ...metadata, moneda: e.target.value })}
-                  required
-                  disabled={loading}
-                >
-                  <option value="USD">USD - Dólares</option>
-                  <option value="ARS">ARS - Pesos</option>
-                </select>
-                {errors.moneda && <small style={{ color: '#d32f2f' }}>{errors.moneda}</small>}
-              </label>
-
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span>Monto Objetivo <span style={{ color: '#d32f2f' }}>*</span></span>
+                <span>💵 Objetivo (USD) <span style={{ color: '#d32f2f' }}>*</span></span>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
-                  value={metadata.monto_objetivo || ''}
-                  onChange={(e) => setMetadata({ ...metadata, monto_objetivo: e.target.value })}
+                  value={metadata.monto_objetivo_usd || ''}
+                  onChange={(e) => setMetadata({ ...metadata, monto_objetivo_usd: e.target.value })}
                   required
                   disabled={loading}
-                  placeholder="50000.00"
+                  placeholder="10000.00"
                 />
-                {errors.monto_objetivo && <small style={{ color: '#d32f2f' }}>{errors.monto_objetivo}</small>}
+                {errors.monto_objetivo_usd && <small style={{ color: '#d32f2f' }}>{errors.monto_objetivo_usd}</small>}
               </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span>� Tipo de Cambio Esperado (USD → ARS)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={metadata.tipo_cambio || ''}
+                  onChange={(e) => setMetadata({ ...metadata, tipo_cambio: e.target.value })}
+                  disabled={loading}
+                  placeholder="1000.00"
+                />
+                <small style={{ color: '#666', fontSize: '0.75rem' }}>
+                  Opcional. Si lo definís, se calculará el equivalente en ARS
+                </small>
+              </label>
+
+              {metadata.monto_objetivo_usd && metadata.tipo_cambio && (
+                <div style={{ 
+                  padding: '0.75rem',
+                  background: '#ecfdf5',
+                  border: '1px solid #a7f3d0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  color: '#065f46'
+                }}>
+                  <strong>Equivalente:</strong> ARS ${(parseFloat(metadata.monto_objetivo_usd) * parseFloat(metadata.tipo_cambio)).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
 
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Comentario</span>
