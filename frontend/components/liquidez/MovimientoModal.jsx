@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function MovimientoModal({ 
   isOpen, 
@@ -12,13 +12,32 @@ export default function MovimientoModal({
   const [formData, setFormData] = useState({
     monto: '',
     moneda: 'USD',
-    tipo_cambio_usado: '1500', // Valor sugerido por defecto
+    tipo_cambio_usado: '', // Sin valor por defecto
     fecha: new Date().toISOString().split('T')[0],
     comentario: ''
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Cargar tipo de cambio actual desde la base de datos cuando se abre el modal
+  useEffect(() => {
+    if (isOpen && !formData.tipo_cambio_usado) {
+      fetch('/api/tipo-cambio-actual')
+        .then(r => r.json())
+        .then((tcData) => {
+          if (tcData.success && tcData.data?.valor) {
+            setFormData(prev => ({
+              ...prev,
+              tipo_cambio_usado: tcData.data.valor.toString()
+            }));
+          }
+        })
+        .catch((err) => {
+          console.log("No se pudo cargar el tipo de cambio actual");
+        });
+    }
+  }, [isOpen]);
 
   const calcularEquivalencia = () => {
     const monto = parseFloat(formData.monto) || 0;
@@ -53,8 +72,8 @@ export default function MovimientoModal({
         comentario: formData.comentario || undefined
       };
 
-      // Solo incluir tipo_cambio_usado si la moneda es ARS
-      if (formData.moneda === 'ARS' && formData.tipo_cambio_usado) {
+      // Siempre incluir tipo_cambio_usado
+      if (formData.tipo_cambio_usado) {
         payload.tipo_cambio_usado = parseFloat(formData.tipo_cambio_usado);
       }
 
@@ -67,7 +86,7 @@ export default function MovimientoModal({
       const result = await response.json();
 
       if (!result.success) {
-        // Manejar errores de validaci├│n Zod
+        // Manejar errores de validación Zod
         if (typeof result.error === 'object' && result.error.fieldErrors) {
           const errors = Object.entries(result.error.fieldErrors)
             .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
@@ -77,17 +96,29 @@ export default function MovimientoModal({
         throw new Error(result.error || 'Error al registrar movimiento');
       }
 
+      // Actualizar el tipo de cambio actual en la base de datos
+      if (payload.tipo_cambio_usado) {
+        fetch('/api/tipo-cambio-actual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            valor: payload.tipo_cambio_usado,
+            comentario: `Actualizado desde ${tipo === 'deposito' ? 'depósito' : 'extracción'}`
+          })
+        }).catch(err => console.error('Error actualizando tipo de cambio:', err));
+      }
+
       onSave(result.data);
       onClose();
       
-      // Reset form
-      setFormData({
+      // Reset form - mantiene el tipo de cambio usado
+      setFormData(prev => ({
         monto: '',
         moneda: 'USD',
-        tipo_cambio_usado: '1500',
+        tipo_cambio_usado: prev.tipo_cambio_usado, // Mantiene el último usado
         fecha: new Date().toISOString().split('T')[0],
         comentario: ''
-      });
+      }));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -239,38 +270,36 @@ export default function MovimientoModal({
             </div>
           </div>
 
-          {/* Tipo de Cambio (solo si es ARS) */}
-          {formData.moneda === 'ARS' && (
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                color: '#374151',
-                marginBottom: '0.5rem'
-              }}>
-                Tipo de Cambio (USD/ARS) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                value={formData.tipo_cambio_usado}
-                onChange={(e) => setFormData({ ...formData, tipo_cambio_usado: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem 1rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
-                placeholder="1500.00"
-              />
-              <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                Ingresa el tipo de cambio del día
-              </p>
-            </div>
-          )}
+          {/* Tipo de Cambio - SIEMPRE visible */}
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              color: '#374151',
+              marginBottom: '0.5rem'
+            }}>
+              Tipo de Cambio (USD/ARS) *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={formData.tipo_cambio_usado}
+              onChange={(e) => setFormData({ ...formData, tipo_cambio_usado: e.target.value })}
+              style={{
+                width: '100%',
+                padding: '0.5rem 1rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+              placeholder="1500.00"
+            />
+            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
+              Ingresa el tipo de cambio del día
+            </p>
+          </div>
 
           {/* Equivalencia */}
           {formData.monto && (

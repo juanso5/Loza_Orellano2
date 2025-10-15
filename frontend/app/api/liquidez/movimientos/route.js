@@ -15,7 +15,7 @@ export async function GET(request) {
 
     const supabase = await getSSRClient();
 
-    // Obtener asignaciones/desasignaciones del fondo
+    // Obtener asignaciones/desasignaciones del fondo (solo manuales)
     const { data: asignaciones, error } = await supabase
       .from('asignacion_liquidez')
       .select(`
@@ -24,10 +24,15 @@ export async function GET(request) {
         fondo_id,
         fecha,
         tipo_operacion,
+        monto,
         monto_usd,
-        comentario
+        moneda,
+        tipo_cambio_usado,
+        comentario,
+        origen
       `)
       .eq('fondo_id', fondoId)
+      .eq('origen', 'manual')
       .order('fecha', { ascending: false });
 
     if (error) {
@@ -44,7 +49,10 @@ export async function GET(request) {
       fecha: a.fecha,
       tipo_mov: a.tipo_operacion === 'asignacion' ? 'deposito' : 'extraccion',
       tipo_operacion: a.tipo_operacion,
+      monto: a.monto,
       monto_usd: a.monto_usd,
+      moneda: a.moneda,
+      tipo_cambio: a.tipo_cambio_usado,
       comentario: a.comentario
     }));
 

@@ -231,21 +231,19 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
       return;
     }
     
-    // Validación: precio obligatorio para compras (Ingreso)
-    if (tipo === 'Ingreso') {
-      const precio = parseFloat(precioUsd);
-      if (!precioUsd || isNaN(precio) || precio <= 0) {
-        alert('Para una compra (Ingreso) el Precio USD es obligatorio y debe ser mayor a 0');
-        return;
-      }
-      
-      // Advertencia si el costo supera la liquidez disponible
-      if (liquidezDisponible !== null) {
-        const costoCompra = precio * Number(nominal);
-        if (costoCompra > liquidezDisponible) {
-          if (!confirm(`El costo de la compra ($${costoCompra.toFixed(2)} USD) supera la liquidez disponible ($${liquidezDisponible.toFixed(2)} USD). El servidor rechazará esta operación. ¿Intentar de todas formas?`)) {
-            return;
-          }
+    // Validación: precio obligatorio para compras y ventas
+    const precio = parseFloat(precioUsd);
+    if (!precioUsd || isNaN(precio) || precio <= 0) {
+      alert(`Para ${tipo === 'Ingreso' ? 'una compra' : 'una venta'} el Precio USD es obligatorio y debe ser mayor a 0`);
+      return;
+    }
+    
+    // Advertencia si el costo supera la liquidez disponible (solo para compras)
+    if (tipo === 'Ingreso' && liquidezDisponible !== null) {
+      const costoCompra = precio * Number(nominal);
+      if (costoCompra > liquidezDisponible) {
+        if (!confirm(`El costo de la compra ($${costoCompra.toFixed(2)} USD) supera la liquidez disponible ($${liquidezDisponible.toFixed(2)} USD). El servidor rechazará esta operación. ¿Intentar de todas formas?`)) {
+          return;
         }
       }
     }
@@ -406,7 +404,7 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               )}
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span>Precio USD {tipo === 'Ingreso' && <span style={{ color: '#d32f2f' }}>*</span>}</span>
+              <span>Precio USD <span style={{ color: '#d32f2f' }}>*</span></span>
               <input 
                 type="number" 
                 value={precioUsd} 
@@ -414,13 +412,13 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
                 step="0.01" 
                 min="0.01" 
                 placeholder="0.00"
-                required={tipo === 'Ingreso'}
+                required
               />
-              {tipo === 'Ingreso' && (
-                <small style={{ color: '#666' }}>
-                  Requerido para validar liquidez
-                </small>
-              )}
+              <small style={{ color: '#666' }}>
+                {tipo === 'Ingreso' 
+                  ? 'Requerido para validar liquidez' 
+                  : 'Requerido para calcular recupero'}
+              </small>
             </label>
           </div>
 

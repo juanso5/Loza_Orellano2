@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 
@@ -13,10 +13,11 @@ export default function AsignacionModal({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [liquidezDisponible, setLiquidezDisponible] = useState(null);
+  const [tipoCambioActual, setTipoCambioActual] = useState(null);
   const [formData, setFormData] = useState({
     monto: "",
     moneda: "USD",
-    tipo_cambio_usado: "1500",
+    tipo_cambio_usado: "",
     tipo_operacion: "asignacion",
     comentario: "",
   });
@@ -25,13 +26,34 @@ export default function AsignacionModal({
     if (isOpen && clienteId) {
       // Cargar liquidez disponible
       fetch(`/api/liquidez/estado?cliente_id=${clienteId}`)
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.success) {
-            setLiquidezDisponible(data.data.liquidezDisponible);
+        .then(r => r.json())
+        .then((liquidezData) => {
+          if (liquidezData.success) {
+            setLiquidezDisponible(liquidezData.data.liquidezDisponible);
           }
         })
-        .catch((err) => console.error("Error cargando liquidez:", err));
+        .catch((err) => {
+          console.error("Error cargando liquidez:", err);
+        });
+      
+      // Cargar el tipo de cambio actual desde la base de datos
+      fetch('/api/tipo-cambio-actual')
+        .then(r => r.json())
+        .then((tcData) => {
+          if (tcData.success && tcData.data?.valor) {
+            const tc = tcData.data.valor;
+            setTipoCambioActual(tc);
+            setFormData(prev => ({ ...prev, tipo_cambio_usado: tc.toString() }));
+          } else {
+            setTipoCambioActual(null);
+            setFormData(prev => ({ ...prev, tipo_cambio_usado: "" }));
+          }
+        })
+        .catch((err) => {
+          console.error("Error cargando tipo de cambio actual:", err);
+          setTipoCambioActual(null);
+          setFormData(prev => ({ ...prev, tipo_cambio_usado: "" }));
+        });
     }
   }, [isOpen, clienteId]);
 
@@ -47,7 +69,7 @@ export default function AsignacionModal({
         fondo_id: fondo.id_fondo,
         monto: parseFloat(formData.monto),
         moneda: formData.moneda,
-        tipo_cambio_usado: formData.moneda === "ARS" ? parseFloat(formData.tipo_cambio_usado) : null,
+        tipo_cambio_usado: parseFloat(formData.tipo_cambio_usado) || null,
         tipo_operacion: formData.tipo_operacion,
         comentario: formData.comentario,
       };
@@ -64,10 +86,30 @@ export default function AsignacionModal({
         throw new Error(data.error || "Error al procesar la asignación");
       }
 
-      setSuccess("Asignación realizada correctamente");
+      // Actualizar el tipo de cambio actual en la base de datos
+      if (payload.tipo_cambio_usado) {
+        fetch('/api/tipo-cambio-actual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            valor: payload.tipo_cambio_usado,
+            comentario: `Actualizado desde asignación a fondo #${fondo.id_fondo}`
+          })
+        }).catch(err => console.error('Error actualizando tipo de cambio:', err));
+      }
+
+      setSuccess("Operación realizada correctamente");
       setTimeout(() => {
         onSave();
         onClose();
+        // Reset form - mantiene el tipo de cambio usado
+        setFormData(prev => ({
+          monto: "",
+          moneda: "USD",
+          tipo_cambio_usado: prev.tipo_cambio_usado, // Mantiene el último usado
+          tipo_operacion: "asignacion",
+          comentario: "",
+        }));
       }, 1500);
     } catch (err) {
       setError(err.message);
@@ -83,7 +125,7 @@ export default function AsignacionModal({
 
   if (!isOpen) return null;
 
-  // Calcular monto en USD
+  // Calcular montos
   const monto = parseFloat(formData.monto) || 0;
   const tc = parseFloat(formData.tipo_cambio_usado) || 1;
   const montoUSD = formData.moneda === "ARS" ? monto / tc : monto;
@@ -92,24 +134,11 @@ export default function AsignacionModal({
     formData.tipo_operacion === "asignacion" &&
     liquidezDisponible !== null &&
     montoUSD > liquidezDisponible;
-  
-  // Calcular equivalencia
-  const calcularEquivalencia = () => {
-    if (!monto) return null;
-    if (formData.moneda === "USD") {
-      return {
-        principal: `USD ${monto.toFixed(2)}`,
-        equivalente: `ARS ${(monto * tc).toFixed(2)}`
-      };
-    } else {
-      return {
-        principal: `ARS ${monto.toFixed(2)}`,
-        equivalente: `USD ${montoUSD.toFixed(2)}`
-      };
-    }
-  };
-  
-  const equivalencia = calcularEquivalencia();
+
+  // Datos del fondo
+  const nombreFondo = fondo?.nombre || fondo?.tipo_cartera?.descripcion || `Fondo #${fondo?.id_fondo}`;
+  const color = fondo?.tipo_cartera?.color || '#3b82f6';
+  const esAsignacion = formData.tipo_operacion === "asignacion";
 
   return (
     <div
@@ -121,113 +150,211 @@ export default function AsignacionModal({
         alignItems: "center",
         justifyContent: "center",
         zIndex: 9999,
+        padding: "20px"
       }}
       onClick={onClose}
     >
       <div
         style={{
           backgroundColor: "white",
-          padding: "2rem",
-          borderRadius: "8px",
-          maxWidth: "500px",
-          width: "90%",
+          borderRadius: "12px",
+          maxWidth: "540px",
+          width: "100%",
           maxHeight: "90vh",
           overflow: "auto",
+          boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)"
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem" }}>
-          <h2 style={{ margin: 0 }}>
-            {formData.tipo_operacion === "asignacion" ? "Asignar" : "Desasignar"} Liquidez
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "1.5rem",
-              cursor: "pointer",
-            }}
-          >
-            Ô£ò
-          </button>
-        </div>
-
-        {/* Info del fondo */}
-        <div
-          style={{
-            backgroundColor: "#f3f4f6",
-            padding: "1rem",
-            borderRadius: "6px",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <p style={{ margin: 0, fontSize: "0.9rem", color: "#6b7280" }}>
-            Fondo seleccionado:
-          </p>
-          <p style={{ margin: "0.25rem 0 0 0", fontWeight: "bold" }}>
-            {fondo.tipo_cartera || `Fondo #${fondo.id_fondo}`}
-          </p>
-        </div>
-
-        {/* Liquidez disponible */}
-        {formData.tipo_operacion === "asignacion" && liquidezDisponible !== null && (
-          <div
-            style={{
-              backgroundColor: excedeDisponible ? "#fee2e2" : "#f0f9ff",
-              padding: "1rem",
-              borderRadius: "8px",
-              marginBottom: "1.5rem",
-              border: excedeDisponible ? "1px solid #dc2626" : "1px solid #3b82f6",
-            }}
-          >
-            <p style={{ margin: 0, fontSize: "0.875rem", color: excedeDisponible ? "#991b1b" : "#1e40af", fontWeight: "600" }}>
-              Liquidez Disponible
-            </p>
-            <div style={{ display: "flex", gap: "1rem", alignItems: "baseline", marginTop: "0.5rem" }}>
-              <p style={{ margin: 0, fontSize: "1.5rem", fontWeight: "700", color: excedeDisponible ? "#dc2626" : "#1d4ed8" }}>
-                USD ${liquidezDisponible.toFixed(2)}
-              </p>
-              <p style={{ margin: 0, fontSize: "0.875rem", color: "#6b7280" }}>
-                | ARS ${(liquidezDisponible * parseFloat(formData.tipo_cambio_usado || "1500")).toFixed(2)} <span style={{ fontSize: "0.75rem" }}>(histórico)</span>
-              </p>
-            </div>
-            {excedeDisponible && (
-              <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.875rem", color: "#991b1b" }}>
-                El monto ingresado excede la liquidez disponible
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Formulario */}
-        <form onSubmit={handleSubmit}>
-          {/* Tipo de operaci├│n */}
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
-              Tipo de Operación
-            </label>
-            <select
-              name="tipo_operacion"
-              value={formData.tipo_operacion}
-              onChange={handleChange}
+        {/* Header simple */}
+        <div style={{
+          padding: "1.5rem",
+          borderBottom: "1px solid #e5e7eb"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <h2 style={{ 
+              margin: 0, 
+              fontSize: "1.25rem", 
+              fontWeight: "700",
+              color: "#111827"
+            }}>
+              {esAsignacion ? "Asignar" : "Desasignar"} Liquidez
+            </h2>
+            <button
+              onClick={onClose}
               style={{
-                width: "100%",
-                padding: "0.625rem",
-                border: "1px solid #d1d5db",
+                background: "none",
+                border: "none",
+                width: "32px",
+                height: "32px",
                 borderRadius: "6px",
-                fontSize: "0.875rem"
+                cursor: "pointer",
+                color: "#6b7280",
+                fontSize: "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#f3f4f6";
+                e.currentTarget.style.color = "#111827";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "none";
+                e.currentTarget.style.color = "#6b7280";
               }}
             >
-              <option value="asignacion">Asignación</option>
-              <option value="desasignacion">Desasignación</option>
-            </select>
+              ×
+            </button>
+          </div>
+          
+          {/* Info del fondo */}
+          <div style={{
+            marginTop: "1rem",
+            padding: "0.875rem",
+            background: "#f9fafb",
+            borderRadius: "8px",
+            border: "1px solid #e5e7eb"
+          }}>
+            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "4px" }}>
+              Fondo seleccionado
+            </div>
+            <div style={{ fontSize: "0.9375rem", fontWeight: "600", color: "#111827" }}>
+              {nombreFondo}
+            </div>
+          </div>
+        </div>
+
+        {/* Body del formulario */}
+        <form onSubmit={handleSubmit} style={{ padding: "1.5rem" }}>
+          {/* Liquidez disponible del cliente (para asignación) */}
+          {esAsignacion && liquidezDisponible !== null && (
+            <div style={{
+              background: excedeDisponible ? "#fef2f2" : "#eff6ff",
+              borderRadius: "8px",
+              padding: "1rem",
+              marginBottom: "1.25rem",
+              border: excedeDisponible ? "1px solid #fca5a5" : "1px solid #bfdbfe"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "#6b7280", textTransform: "uppercase" }}>
+                  💰 Liquidez Disponible del Cliente
+                </span>
+                {excedeDisponible && (
+                  <span style={{
+                    fontSize: "0.75rem",
+                    fontWeight: "700",
+                    color: "#dc2626"
+                  }}>
+                    ⚠ Insuficiente
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "800", color: excedeDisponible ? "#dc2626" : "#3b82f6" }}>
+                ${liquidezDisponible.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+              </div>
+            </div>
+          )}
+
+          {/* Liquidez asignada al fondo (para desasignación) */}
+          {!esAsignacion && fondo?.liquidez_asignada !== undefined && (
+            <div style={{
+              background: "#f0fdf4",
+              borderRadius: "8px",
+              padding: "1rem",
+              marginBottom: "1.25rem",
+              border: "1px solid #86efac"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                <span style={{ fontSize: "0.75rem", fontWeight: "600", color: "#15803d", textTransform: "uppercase" }}>
+                  📊 Liquidez Asignada al Fondo
+                </span>
+              </div>
+              <div style={{ fontSize: "1.5rem", fontWeight: "800", color: "#16a34a" }}>
+                ${(fondo.liquidez_asignada || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#15803d", marginTop: "6px" }}>
+                Este es el monto máximo que puedes desasignar
+              </div>
+            </div>
+          )}
+
+          {/* Tipo de operación */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
+              Tipo de Operación
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, tipo_operacion: "asignacion" })}
+                style={{
+                  padding: "0.75rem",
+                  borderRadius: "8px",
+                  border: formData.tipo_operacion === "asignacion" ? `2px solid ${color}` : "1px solid #e5e7eb",
+                  background: formData.tipo_operacion === "asignacion" ? "#f9fafb" : "#fff",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: formData.tipo_operacion === "asignacion" ? color : "#6b7280",
+                  transition: "all 0.2s"
+                }}
+              >
+                Asignación
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, tipo_operacion: "desasignacion" })}
+                style={{
+                  padding: "0.75rem",
+                  borderRadius: "8px",
+                  border: formData.tipo_operacion === "desasignacion" ? `2px solid ${color}` : "1px solid #e5e7eb",
+                  background: formData.tipo_operacion === "desasignacion" ? "#f9fafb" : "#fff",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  color: formData.tipo_operacion === "desasignacion" ? color : "#6b7280",
+                  transition: "all 0.2s"
+                }}
+              >
+                Desasignación
+              </button>
+            </div>
+          </div>
+
+          {/* Moneda */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
+              Moneda
+            </label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+              {["USD", "ARS"].map(moneda => (
+                <button
+                  key={moneda}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, moneda })}
+                  style={{
+                    padding: "0.75rem",
+                    borderRadius: "8px",
+                    border: formData.moneda === moneda ? `2px solid ${color}` : "1px solid #e5e7eb",
+                    background: formData.moneda === moneda ? "#f9fafb" : "#fff",
+                    cursor: "pointer",
+                    fontSize: "0.875rem",
+                    fontWeight: "700",
+                    color: formData.moneda === moneda ? color : "#6b7280",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  {moneda}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Monto */}
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
               Monto *
             </label>
             <input
@@ -240,110 +367,90 @@ export default function AsignacionModal({
               required
               style={{
                 width: "100%",
-                padding: "0.625rem",
-                border: `1px solid ${excedeDisponible ? "#dc2626" : "#d1d5db"}`,
-                borderRadius: "6px",
-                fontSize: "0.875rem"
+                padding: "0.75rem",
+                border: `1px solid ${excedeDisponible ? "#fca5a5" : "#d1d5db"}`,
+                borderRadius: "8px",
+                fontSize: "1rem",
+                fontWeight: "500",
+                outline: "none"
               }}
               placeholder="0.00"
             />
+            {excedeDisponible && (
+              <div style={{
+                marginTop: "6px",
+                fontSize: "0.8125rem",
+                color: "#dc2626",
+                display: "flex",
+                alignItems: "center",
+                gap: "4px"
+              }}>
+                <span>⚠</span>
+                El monto excede la liquidez disponible
+              </div>
+            )}
           </div>
 
-          {/* Moneda */}
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
-              Moneda
+          {/* Tipo de Cambio - SIEMPRE visible */}
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
+              Tipo de Cambio (USD/ARS) *
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem" }}>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, moneda: "USD" })}
-                style={{
-                  padding: "0.625rem",
-                  borderRadius: "6px",
-                  border: formData.moneda === "USD" ? "2px solid #3b82f6" : "2px solid #d1d5db",
-                  backgroundColor: formData.moneda === "USD" ? "#eff6ff" : "white",
-                  color: formData.moneda === "USD" ? "#1d4ed8" : "#374151",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  fontSize: "0.875rem"
-                }}
-              >
-                USD
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData({ ...formData, moneda: "ARS" })}
-                style={{
-                  padding: "0.625rem",
-                  borderRadius: "6px",
-                  border: formData.moneda === "ARS" ? "2px solid #3b82f6" : "2px solid #d1d5db",
-                  backgroundColor: formData.moneda === "ARS" ? "#eff6ff" : "white",
-                  color: formData.moneda === "ARS" ? "#1d4ed8" : "#374151",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  fontSize: "0.875rem"
-                }}
-              >
-                ARS
-              </button>
-            </div>
+            <input
+              type="number"
+              name="tipo_cambio_usado"
+              value={formData.tipo_cambio_usado}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              required
+              style={{
+                width: "100%",
+                padding: "0.75rem",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "1rem",
+                outline: "none"
+              }}
+              placeholder="1500.00"
+            />
+            {tipoCambioActual && (
+              <div style={{
+                marginTop: "6px",
+                fontSize: "0.75rem",
+                color: "#6b7280"
+              }}>
+                💡 Tipo de cambio actual: ${tipoCambioActual.toFixed(2)}
+              </div>
+            )}
           </div>
-
-          {/* Tipo de Cambio (solo si es ARS) */}
-          {formData.moneda === "ARS" && (
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
-                Tipo de Cambio (USD/ARS) *
-              </label>
-              <input
-                type="number"
-                name="tipo_cambio_usado"
-                value={formData.tipo_cambio_usado}
-                onChange={handleChange}
-                step="0.01"
-                min="0"
-                required
-                style={{
-                  width: "100%",
-                  padding: "0.625rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "6px",
-                  fontSize: "0.875rem"
-                }}
-                placeholder="1500.00"
-              />
-              <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem", margin: "0.25rem 0 0 0" }}>
-                Tipo de cambio del día
-              </p>
-            </div>
-          )}
 
           {/* Equivalencia */}
-          {equivalencia && (
+          {monto > 0 && (
             <div style={{
-              backgroundColor: "#f9fafb",
+              background: "#f9fafb",
               borderRadius: "8px",
               padding: "1rem",
-              marginBottom: "1rem",
+              marginBottom: "1.25rem",
               border: "1px solid #e5e7eb"
             }}>
-              <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.25rem", margin: "0 0 0.25rem 0" }}>
-                Equivalencia:
-              </p>
-              <p style={{ fontSize: "1.125rem", fontWeight: "700", color: "#111827", margin: "0.25rem 0" }}>
-                {equivalencia.principal}
-              </p>
-              <p style={{ fontSize: "0.875rem", color: "#6b7280", margin: "0.25rem 0 0 0" }}>
-                {equivalencia.equivalente}
-              </p>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "6px" }}>
+                Equivalencia
+              </div>
+              <div style={{ fontSize: "1rem", fontWeight: "700", color: "#111827" }}>
+                {formData.moneda === "USD" ? (
+                  <>USD ${monto.toFixed(2)} = ARS ${(monto * tc).toFixed(2)}</>
+                ) : (
+                  <>ARS ${monto.toFixed(2)} = USD ${montoUSD.toFixed(2)}</>
+                )}
+              </div>
             </div>
           )}
 
           {/* Comentario */}
-          <div style={{ marginBottom: "1rem" }}>
-            <label style={{ display: "block", fontWeight: "600", marginBottom: "0.5rem", fontSize: "0.875rem", color: "#374151" }}>
-              ­Comentario (opcional)
+          <div style={{ marginBottom: "1.25rem" }}>
+            <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
+              Comentario (opcional)
             </label>
             <textarea
               name="comentario"
@@ -352,82 +459,84 @@ export default function AsignacionModal({
               rows={3}
               style={{
                 width: "100%",
-                padding: "0.625rem",
+                padding: "0.75rem",
                 border: "1px solid #d1d5db",
-                borderRadius: "6px",
+                borderRadius: "8px",
                 fontSize: "0.875rem",
                 fontFamily: "inherit",
-                resize: "vertical"
+                resize: "vertical",
+                outline: "none"
               }}
-              placeholder="Ej: Asignaci├│n inicial, Ajuste de estrategia..."
+              placeholder="Ej: Asignación inicial, Rebalanceo..."
             />
           </div>
 
           {/* Mensajes */}
           {error && (
-            <div
-              style={{
-                backgroundColor: "#fee2e2",
-                color: "#dc2626",
-                padding: "0.75rem",
-                borderRadius: "4px",
-                marginBottom: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              <span>ÔÜá´©Å</span>
-              <span>{error}</span>
+            <div style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              padding: "0.75rem",
+              borderRadius: "8px",
+              marginBottom: "1rem",
+              fontSize: "0.875rem",
+              border: "1px solid #fca5a5"
+            }}>
+              ⚠ {error}
             </div>
           )}
 
           {success && (
-            <div
-              style={{
-                backgroundColor: "#d1fae5",
-                color: "#059669",
-                padding: "0.75rem",
-                borderRadius: "4px",
-                marginBottom: "1rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-              }}
-            >
-              <span>Ô£ô</span>
-              <span>{success}</span>
+            <div style={{
+              background: "#d1fae5",
+              color: "#065f46",
+              padding: "0.75rem",
+              borderRadius: "8px",
+              marginBottom: "1rem",
+              fontSize: "0.875rem",
+              border: "1px solid #86efac"
+            }}>
+              ✓ {success}
             </div>
           )}
 
           {/* Botones */}
-          <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", gap: "10px" }}>
             <button
               type="button"
               onClick={onClose}
+              disabled={loading}
               style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "#f3f4f6",
+                flex: 1,
+                padding: "0.75rem",
+                background: "#fff",
                 border: "1px solid #d1d5db",
-                borderRadius: "4px",
-                cursor: "pointer",
+                borderRadius: "8px",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                color: "#374151",
+                opacity: loading ? 0.5 : 1
               }}
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={loading || excedeDisponible}
+              disabled={loading || excedeDisponible || !formData.monto}
               style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: excedeDisponible || loading ? "#9ca3af" : "#3b82f6",
-                color: "white",
+                flex: 1,
+                padding: "0.75rem",
+                background: (loading || excedeDisponible || !formData.monto) ? "#9ca3af" : color,
+                color: "#fff",
                 border: "none",
-                borderRadius: "4px",
-                cursor: excedeDisponible || loading ? "not-allowed" : "pointer",
+                borderRadius: "8px",
+                cursor: (loading || excedeDisponible || !formData.monto) ? "not-allowed" : "pointer",
+                fontSize: "0.875rem",
+                fontWeight: "700"
               }}
             >
-              {loading ? "Procesando..." : "Confirmar"}
+              {loading ? "Procesando..." : `Confirmar ${esAsignacion ? "Asignación" : "Desasignación"}`}
             </button>
           </div>
         </form>

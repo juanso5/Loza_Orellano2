@@ -53,13 +53,14 @@ export async function GET(req) {
       .from("fondo")
       .select(`
         id_fondo,
+        nombre,
         tipo_cartera_id,
         plazo,
         tipo_plazo,
         rend_esperado,
         deposito_inicial,
         fecha_alta,
-        tipo_cartera:tipo_cartera_id(descripcion)
+        tipo_cartera:tipo_cartera_id(descripcion, color, icono)
       `)
       .eq("cliente_id", clienteId);
 
@@ -100,8 +101,13 @@ export async function GET(req) {
 
       return {
         id_fondo: fondo.id_fondo,
+        nombre: fondo.nombre,
         tipo_cartera_id: fondo.tipo_cartera_id,
-        tipo_cartera: fondo.tipo_cartera?.descripcion || "N/A",
+        tipo_cartera: {
+          descripcion: fondo.tipo_cartera?.descripcion || "N/A",
+          color: fondo.tipo_cartera?.color || "#3b82f6",
+          icono: fondo.tipo_cartera?.icono || "📊"
+        },
         plazo: fondo.plazo,
         tipo_plazo: fondo.tipo_plazo,
         rend_esperado: fondo.rend_esperado,

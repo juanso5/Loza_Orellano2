@@ -46,12 +46,13 @@ export async function calcularEstadoLiquidez(supabaseClient, clienteId) {
  */
 export async function calcularEstadoFondo(supabaseClient, clienteId, fondoId) {
   try {
-    // 1. Liquidez asignada a este fondo
+    // 1. Liquidez asignada a este fondo (solo asignaciones manuales)
     const { data: asignaciones, error: errorAsig } = await supabaseClient
       .from('asignacion_liquidez')
       .select('monto_usd, tipo_operacion')
       .eq('cliente_id', clienteId)
-      .eq('fondo_id', fondoId);
+      .eq('fondo_id', fondoId)
+      .eq('origen', 'manual');
 
     if (errorAsig) throw errorAsig;
 

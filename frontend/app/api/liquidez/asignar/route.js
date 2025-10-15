@@ -121,6 +121,7 @@ export async function POST(req) {
       tipo_cambio_usado: tipo_cambio_usado ? parseFloat(tipo_cambio_usado) : null,
       monto_usd: parseFloat(monto_usd),
       comentario: comentario || null,
+      origen: 'manual',
     };
 
     const { data, error } = await sb

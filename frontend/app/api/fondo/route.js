@@ -239,6 +239,7 @@ export async function POST(req) {
             tipo_cambio_usado: null,
             monto_usd: parseFloat(liquidez_inicial),
             comentario: 'Asignación inicial al crear fondo',
+            origen: 'manual',
           })
           .select()
           .single();

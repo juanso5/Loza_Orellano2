@@ -29,7 +29,10 @@ export default function LiquidezPage() {
       .finally(() => setLoadingMovimientos(false));
   }, [selectedClientId]);
   
-  const [modalState, setModalState] = useState({ movimiento: { isOpen: false, tipo: "deposito" }, asignacion: { isOpen: false, fondo: null } });
+  const [modalState, setModalState] = useState({ 
+    movimiento: { isOpen: false, tipo: "deposito" }, 
+    asignacion: { isOpen: false, fondo: null }
+  });
   
   const openMovimientoModal = (tipo) => setModalState(prev => ({ ...prev, movimiento: { isOpen: true, tipo } }));
   const closeMovimientoModal = () => setModalState(prev => ({ ...prev, movimiento: { isOpen: false, tipo: "deposito" } }));
@@ -212,29 +215,276 @@ export default function LiquidezPage() {
                 <div className="section">
                   <h2 className="section-title"><i className="fas fa-chart-bar"></i> Fondos del Cliente</h2>
                   <div className="fondos-grid">
-                    {estadoLiquidez.fondos.map((fondo) => (<FondoCard key={fondo.id_fondo} fondo={{ ...fondo, dineroEnAcciones: fondo.dineroInvertido }} onAsignar={openAsignacionModal} />))}
+                    {estadoLiquidez.fondos.map((fondo) => (
+                      <FondoCard 
+                        key={fondo.id_fondo} 
+                        fondo={{ 
+                          ...fondo, 
+                          dineroEnAcciones: fondo.dineroInvertido,
+                          liquidez_asignada: fondo.liquidezAsignada,
+                          saldo_disponible: fondo.saldoDisponible,
+                          progreso_porcentaje: fondo.porcentajeInvertido,
+                          valor_total_fondo: fondo.liquidezAsignada,
+                          rendimiento_porcentaje: fondo.rend_esperado || 0
+                        }} 
+                        onAsignar={openAsignacionModal}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
               {movimientosLiquidez.length > 0 && (
                 <div className="section">
-                  <h2 className="section-title"><i className="fas fa-list"></i> Últimos Movimientos</h2>
-                  <div className="table-container">
-                    <table className="data-table">
-                      <thead><tr><th>Fecha</th><th>Tipo</th><th className="text-right">Monto</th><th>Moneda</th><th className="text-right">Monto USD</th><th>Comentario</th></tr></thead>
-                      <tbody>
-                        {movimientosLiquidez.map((mov) => (
-                          <tr key={mov.id_mov_liq}>
-                            <td>{new Date(mov.fecha).toLocaleDateString('es-AR')}</td>
-                            <td><span className={`badge ${mov.tipo_mov === "deposito" ? "success" : "danger"}`}>{mov.tipo_mov === "deposito" ? <><i className="fas fa-plus-circle"></i> Depósito</> : <><i className="fas fa-minus-circle"></i> Extracción</>}</span></td>
-                            <td className="text-right font-medium">${mov.monto.toFixed(2)}</td>
-                            <td>{mov.moneda}</td>
-                            <td className="text-right font-medium">${mov.monto_usd.toFixed(2)}</td>
-                            <td className="text-muted">{mov.comentario || "-"}</td>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    marginBottom: '1.5rem'
+                  }}>
+                    <h2 style={{ 
+                      margin: 0, 
+                      fontSize: '1.5rem', 
+                      fontWeight: '700', 
+                      color: '#111827',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #3b82f615 0%, #3b82f630 100%)',
+                        border: '2px solid #3b82f650',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#3b82f6',
+                        fontSize: '1.125rem'
+                      }}>
+                        <i className="fas fa-history"></i>
+                      </div>
+                      Últimos Movimientos
+                    </h2>
+                    <div style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      background: '#f3f4f6',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: '#6b7280'
+                    }}>
+                      {movimientosLiquidez.length} movimiento{movimientosLiquidez.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                  <div style={{
+                    background: '#fff',
+                    borderRadius: '16px',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+                    overflow: 'hidden',
+                    border: '1px solid #e5e7eb'
+                  }}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{
+                        width: '100%',
+                        borderCollapse: 'collapse'
+                      }}>
+                        <thead>
+                          <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                            <th style={{
+                              padding: '1rem 1.5rem',
+                              textAlign: 'left',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              <i className="fas fa-calendar" style={{ marginRight: '8px', color: '#9ca3af' }}></i>
+                              Fecha
+                            </th>
+                            <th style={{
+                              padding: '1rem 1.5rem',
+                              textAlign: 'left',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              <i className="fas fa-tag" style={{ marginRight: '8px', color: '#9ca3af' }}></i>
+                              Tipo
+                            </th>
+                            <th style={{
+                              padding: '1rem 1.5rem',
+                              textAlign: 'right',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              <i className="fas fa-coins" style={{ marginRight: '8px', color: '#9ca3af' }}></i>
+                              Monto
+                            </th>
+                            <th style={{
+                              padding: '1rem 1.5rem',
+                              textAlign: 'center',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              <i className="fas fa-dollar-sign" style={{ marginRight: '8px', color: '#9ca3af' }}></i>
+                              Moneda
+                            </th>
+                            <th style={{
+                              padding: '1rem 1.5rem',
+                              textAlign: 'right',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              <i className="fas fa-money-bill-wave" style={{ marginRight: '8px', color: '#9ca3af' }}></i>
+                              Monto USD
+                            </th>
+                            <th style={{
+                              padding: '1rem 1.5rem',
+                              textAlign: 'left',
+                              fontSize: '0.75rem',
+                              fontWeight: '700',
+                              color: '#6b7280',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em'
+                            }}>
+                              <i className="fas fa-comment" style={{ marginRight: '8px', color: '#9ca3af' }}></i>
+                              Comentario
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {movimientosLiquidez.map((mov, index) => {
+                            const esDeposito = mov.tipo_mov === "deposito";
+                            return (
+                              <tr 
+                                key={mov.id_mov_liq}
+                                style={{
+                                  borderBottom: index !== movimientosLiquidez.length - 1 ? '1px solid #f3f4f6' : 'none',
+                                  transition: 'background 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = '#f9fafb'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <td style={{
+                                  padding: '1.25rem 1.5rem',
+                                  fontSize: '0.9375rem',
+                                  color: '#111827',
+                                  fontWeight: '500'
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{
+                                      width: '36px',
+                                      height: '36px',
+                                      borderRadius: '8px',
+                                      background: esDeposito ? '#dcfce7' : '#fee2e2',
+                                      border: esDeposito ? '1px solid #86efac' : '1px solid #fca5a5',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      color: esDeposito ? '#166534' : '#991b1b',
+                                      fontSize: '0.875rem'
+                                    }}>
+                                      <i className={`fas fa-${esDeposito ? 'arrow-down' : 'arrow-up'}`}></i>
+                                    </div>
+                                    <div>
+                                      <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: '#111827' }}>
+                                        {new Date(mov.fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                      </div>
+                                      <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '2px' }}>
+                                        {new Date(mov.fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '1.25rem 1.5rem' }}>
+                                  <span style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '20px',
+                                    fontSize: '0.8125rem',
+                                    fontWeight: '700',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    background: esDeposito ? 'linear-gradient(135deg, #dcfce7 0%, #a7f3d0 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                                    color: esDeposito ? '#065f46' : '#991b1b',
+                                    border: esDeposito ? '1px solid #86efac' : '1px solid #fca5a5'
+                                  }}>
+                                    <i className={`fas fa-${esDeposito ? 'plus' : 'minus'}-circle`}></i>
+                                    {esDeposito ? 'Depósito' : 'Extracción'}
+                                  </span>
+                                </td>
+                                <td style={{
+                                  padding: '1.25rem 1.5rem',
+                                  textAlign: 'right',
+                                  fontSize: '1rem',
+                                  fontWeight: '700',
+                                  color: '#111827'
+                                }}>
+                                  {mov.moneda === 'USD' ? '$' : 'AR$'}{mov.monto.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td style={{
+                                  padding: '1.25rem 1.5rem',
+                                  textAlign: 'center'
+                                }}>
+                                  <span style={{
+                                    padding: '4px 12px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.875rem',
+                                    fontWeight: '700',
+                                    background: mov.moneda === 'USD' ? '#dbeafe' : '#fef3c7',
+                                    color: mov.moneda === 'USD' ? '#1e40af' : '#92400e',
+                                    border: mov.moneda === 'USD' ? '1px solid #93c5fd' : '1px solid #fde68a'
+                                  }}>
+                                    {mov.moneda}
+                                  </span>
+                                </td>
+                                <td style={{
+                                  padding: '1.25rem 1.5rem',
+                                  textAlign: 'right',
+                                  fontSize: '0.9375rem',
+                                  fontWeight: '700',
+                                  color: '#3b82f6'
+                                }}>
+                                  ${mov.monto_usd.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </td>
+                                <td style={{
+                                  padding: '1.25rem 1.5rem',
+                                  fontSize: '0.875rem',
+                                  color: '#6b7280',
+                                  maxWidth: '250px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {mov.comentario ? (
+                                    <span title={mov.comentario} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <i className="fas fa-sticky-note" style={{ color: '#9ca3af', fontSize: '0.75rem' }}></i>
+                                      {mov.comentario}
+                                    </span>
+                                  ) : (
+                                    <span style={{ color: '#d1d5db', fontStyle: 'italic' }}>Sin comentario</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               )}

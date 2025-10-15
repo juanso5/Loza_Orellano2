@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import DetalleModal from './estrategias/DetalleModal';
 
-export default function FondoCardDetallado({ portfolio, totalClient, formatNumber, fmtDate, weighted, onDelete }) {
+export default function FondoCardDetallado({ portfolio, totalClient, formatNumber, fmtDate, weighted, onDelete, onOpenDetail }) {
   const [detalleOpen, setDetalleOpen] = useState(false);
   
   // Cálculos básicos
@@ -79,7 +79,7 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
     return (
       <>
         <div 
-          onClick={() => setDetalleOpen(true)}
+          onClick={() => onOpenDetail && onOpenDetail(portfolio.id)}
           style={cardBaseStyle}
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
@@ -304,7 +304,7 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
     return (
       <>
         <div 
-          onClick={() => setDetalleOpen(true)}
+          onClick={() => onOpenDetail && onOpenDetail(portfolio.id)}
           style={cardBaseStyle}
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
@@ -507,7 +507,7 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
     return (
       <>
         <div 
-          onClick={() => setDetalleOpen(true)}
+          onClick={() => onOpenDetail && onOpenDetail(portfolio.id)}
           style={cardBaseStyle}
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
@@ -678,7 +678,7 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
     return (
       <>
         <div 
-          onClick={() => setDetalleOpen(true)}
+          onClick={() => onOpenDetail && onOpenDetail(portfolio.id)}
           style={cardBaseStyle}
           onMouseEnter={(e) => handleCardHover(e, true)}
           onMouseLeave={(e) => handleCardHover(e, false)}
@@ -879,7 +879,7 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
   return (
     <>
       <div 
-        onClick={() => setDetalleOpen(true)}
+        onClick={() => onOpenDetail && onOpenDetail(portfolio.id)}
         style={cardBaseStyle}
         onMouseEnter={(e) => handleCardHover(e, true)}
         onMouseLeave={(e) => handleCardHover(e, false)}

@@ -9,7 +9,8 @@ import ClientDetail from "../../components/ClientDetail";
 import MovementModal from "../../components/MovementModal";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 import AddPortfolioModal from "../../components/AddPortfolioModal";
-import PortfolioDetailModal from "../../components/PortfolioDetailModal";
+import TenenciasFondoModal from "../../components/TenenciasFondoModal";
+import DetalleEspecieModal from "../../components/DetalleEspecieModal";
 import SpeciesHistoryModal from "../../components/SpeciesHistoryModal";
 
 // Utilities
@@ -38,6 +39,12 @@ const FondosPage = () => {
     clientId: null,
     portfolioId: null,
     fundName: null,
+  });
+
+  const [isDetalleEspecieOpen, setIsDetalleEspecieOpen] = useState(false);
+  const [detalleEspecieContext, setDetalleEspecieContext] = useState({
+    fondo: null,
+    especie: null,
   });
 
   // 1) Cargar clientes
@@ -651,22 +658,43 @@ const FondosPage = () => {
         />
       )}
 
-      {isPortfolioDetailOpen && (
-        <PortfolioDetailModal
-          clients={clients}
-          context={portfolioModalContext}
-          onClose={() => setIsPortfolioDetailOpen(false)}
-          onSave={handleSavePortfolioEdits}
-          onOpenSpeciesHistory={(fundName) => {
-            setSpeciesHistoryContext({ ...portfolioModalContext, fundName });
-            setIsSpeciesHistoryOpen(true);
-          }}
-          onDelete={() =>
-            handleDeletePortfolio(
-              portfolioModalContext.clientId,
-              portfolioModalContext.portfolioId
-            )
+      {isPortfolioDetailOpen && (() => {
+        console.log('🔵 ABRIENDO MODAL DE TENENCIAS', portfolioModalContext);
+        const client = clients.find(c => c.id === portfolioModalContext.clientId);
+        const portfolio = client?.portfolios?.find(p => p.id === portfolioModalContext.portfolioId);
+        console.log('🔵 Portfolio encontrado:', portfolio);
+        const fondo = {
+          id_fondo: portfolio?.id,
+          nombre: portfolio?.name,
+          liquidez_disponible: portfolio?.liquidez?.saldoDisponible || 0,
+          tipo_cartera: {
+            descripcion: portfolio?.name,
+            color: '#3b82f6',
+            icono: 'fas fa-chart-line'
           }
+        };
+        console.log('🔵 Fondo construido:', fondo);
+        
+        return (
+          <TenenciasFondoModal
+            fondo={fondo}
+            onClose={() => setIsPortfolioDetailOpen(false)}
+            onSelectEspecie={(especie) => {
+              setDetalleEspecieContext({ fondo, especie });
+              setIsDetalleEspecieOpen(true);
+            }}
+            onDeleteFondo={(fondoId) => {
+              handleDeletePortfolio(portfolioModalContext.clientId, fondoId);
+            }}
+          />
+        );
+      })()}
+
+      {isDetalleEspecieOpen && (
+        <DetalleEspecieModal
+          fondo={detalleEspecieContext.fondo}
+          especie={detalleEspecieContext.especie}
+          onClose={() => setIsDetalleEspecieOpen(false)}
         />
       )}
 

@@ -76,7 +76,8 @@ export async function calcularLiquidezFondo(supabase, fondoId) {
   const { data: asignaciones, error } = await supabase
     .from('asignacion_liquidez')
     .select('tipo_operacion, monto_usd')
-    .eq('fondo_id', fondoId);
+    .eq('fondo_id', fondoId)
+    .eq('origen', 'manual');
 
   if (error) throw error;
 
@@ -105,6 +106,7 @@ export async function obtenerFlujosPeriodo(supabase, fondoId, fechaInicio, fecha
     .from('asignacion_liquidez')
     .select('tipo_operacion, monto_usd, origen, fecha')
     .eq('fondo_id', fondoId)
+    .eq('origen', 'manual')
     .gte('fecha', fechaInicio.toISOString())
     .lte('fecha', fechaFin.toISOString());
 
