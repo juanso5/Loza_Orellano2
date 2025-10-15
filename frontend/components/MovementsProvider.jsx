@@ -83,7 +83,11 @@ export function MovementsProvider({ children }) {
     }
   }, [normalizeSimple]);
 
-  useEffect(() => { loadLatestPrices(); }, [loadLatestPrices]);
+  // Cargar precios al montar el provider
+  useEffect(() => { 
+    loadLatestPrices(); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Solo al montar
 
   const refreshPrices = useCallback(async () => {
     await loadLatestPrices();

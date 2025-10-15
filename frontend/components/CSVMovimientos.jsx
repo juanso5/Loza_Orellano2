@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { MovementsProvider, useMovements } from './MovementsProvider';
 import LastMovementsTable from './LastMovementsTable';
 import useDebouncedValue from './useDebouncedValue';
-import ClientsPanel from './ClientsPanel'
+import ClientsPanel from './ClientsPanel';
+import ClientsHoldingsList from './ClientsHoldingsList';
 import MovementModal from './MovementModal';
 
-function Toolbar({ onAdd }) {
+function Toolbar({ onAdd, viewMode, setViewMode }) {
   const fileRef = useRef(null);
   const { query, setQuery, uploadState, setUploadState, refreshFirstPage, refreshPrices } = useMovements();
   const debouncedQuery = useDebouncedValue(query, 280);
@@ -70,6 +71,24 @@ function Toolbar({ onAdd }) {
         <button className="btn secondary" onClick={onFileClick} title="Cargar precios CSV">
           <i className="fas fa-file-csv" /> Cargar precios CSV
         </button>
+        <div style={{ display: 'flex', gap: 4, background: '#f3f4f6', borderRadius: 6, padding: 2 }}>
+          <button 
+            className={viewMode === 'holdings' ? 'btn primary' : 'btn secondary'}
+            onClick={() => setViewMode('holdings')}
+            style={{ fontSize: '0.875rem', padding: '6px 12px' }}
+            title="Vista por Holdings"
+          >
+            <i className="fas fa-chart-pie" /> Holdings
+          </button>
+          <button 
+            className={viewMode === 'movements' ? 'btn primary' : 'btn secondary'}
+            onClick={() => setViewMode('movements')}
+            style={{ fontSize: '0.875rem', padding: '6px 12px' }}
+            title="Últimos Movimientos"
+          >
+            <i className="fas fa-list" /> Movimientos
+          </button>
+        </div>
         <input ref={fileRef} type="file" accept=".csv" onChange={onFileChange} style={{ display: 'none' }} />
         <div className="csv-status" aria-live="polite" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <small>
@@ -91,8 +110,21 @@ function Toolbar({ onAdd }) {
   );
 }
 
-function MovementsContent({ onSelectClient, onAdd }) {
+function MovementsContent({ onSelectClient, onAdd, viewMode }) {
   const { filteredItems, loading, error, fetchNextPage, hasMore, deleteMovement } = useMovements();
+
+  if (viewMode === 'holdings') {
+    return (
+      <div style={{ 
+        width: '100%', 
+        maxWidth: 1200, 
+        margin: '0 auto',
+        padding: '0 20px'
+      }}>
+        <ClientsHoldingsList onAdd={onAdd} />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -121,6 +153,7 @@ function MovementsContent({ onSelectClient, onAdd }) {
 export default function CSVMovimientos() {
   const [addOpen, setAddOpen] = useState(false);
   const [prefClient, setPrefClient] = useState(null);
+  const [viewMode, setViewMode] = useState('holdings'); // 'holdings' | 'movements'
 
   const openAddFor = (clientId) => {
     setPrefClient(clientId ?? null);
@@ -129,11 +162,14 @@ export default function CSVMovimientos() {
 
   return (
     <MovementsProvider>
-      <Toolbar onAdd={() => openAddFor(prefClient)} />
-      <MovementsContent
-        onSelectClient={(id) => setPrefClient(id)}
-        onAdd={(clientId) => openAddFor(clientId)}
-      />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+        <Toolbar onAdd={() => openAddFor(prefClient)} viewMode={viewMode} setViewMode={setViewMode} />
+        <MovementsContent
+          onSelectClient={(id) => setPrefClient(id)}
+          onAdd={(clientId) => openAddFor(clientId)}
+          viewMode={viewMode}
+        />
+      </div>
       <MovementModal open={addOpen} onClose={() => setAddOpen(false)} defaultClientId={prefClient ?? undefined} />
     </MovementsProvider>
   );
