@@ -10,7 +10,18 @@ export default function FondoCardDetallado({ portfolio, totalClient, formatNumbe
   const totalNom = portfolio.funds.reduce((s, f) => s + (f.nominal || 0), 0);
   const totalReturn = weighted(portfolio.funds, 'totalReturn');
   const liquidezTotal = portfolio.liquidez?.saldoDisponible || 0;
-  const patrimonio = totalNom + liquidezTotal;
+  
+  // Calcular valor actual de las especies (cantidad × precio actual en USD)
+  const valorEspecies = portfolio.funds.reduce((sum, f) => {
+    const nominal = f.nominal || 0;
+    // Usar precio_usd si está disponible, sino intentar precioActualARS
+    // En el futuro, los precios deberían venir ya normalizados en USD
+    const precioUSD = f.precio_usd || f.precioActualUSD || 0;
+    return sum + (nominal * precioUSD);
+  }, 0);
+  
+  // PATRIMONIO = Liquidez Disponible + Valor Actual de Especies
+  const patrimonio = liquidezTotal + valorEspecies;
   
   // Metadata y configuración
   const metadata = portfolio.meta?.metadata;

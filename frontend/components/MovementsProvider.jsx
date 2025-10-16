@@ -70,12 +70,13 @@ export function MovementsProvider({ children }) {
       const map = {};
       for (const r of arr) {
         const name = (r?.nombre || '').trim();
-        const price = Number(r?.precio);
-        if (!name || !Number.isFinite(price) || price <= 0) continue;
+        // Usar precio_usd (normalizado en USD) en lugar de precio
+        const priceUSD = Number(r?.precio_usd);
+        if (!name || !Number.isFinite(priceUSD) || priceUSD <= 0) continue;
         const k = normalizeSimple(name);
-        map[k] = price;
+        map[k] = priceUSD;
         // alias AL30 -> AL30D (si aplica)
-        if (k && !k.endsWith('d')) map[`${k}d`] = price;
+        if (k && !k.endsWith('d')) map[`${k}d`] = priceUSD;
       }
       setPricesMap(map);
     } catch {

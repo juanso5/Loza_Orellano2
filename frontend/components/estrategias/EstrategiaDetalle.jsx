@@ -2,10 +2,11 @@
 
 import { useMemo, useState, useEffect } from 'react';
 
-// Componente común para mostrar especies
+// Componente común para mostrar especies (CON FILTRO Y SCROLL)
 const EspeciesTable = ({ fondoId }) => {
   const [especies, setEspecies] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [filtro, setFiltro] = useState('');
 
   useEffect(() => {
     if (!fondoId) return;
@@ -24,6 +25,16 @@ const EspeciesTable = ({ fondoId }) => {
       .finally(() => setLoading(false));
   }, [fondoId]);
 
+  // Filtrar especies por nombre
+  const especiesFiltradas = useMemo(() => {
+    if (!filtro.trim()) return especies;
+    const filtroLower = filtro.toLowerCase();
+    return especies.filter(esp => {
+      const nombre = (esp.especie || esp.tipo_especie?.nombre || '').toLowerCase();
+      return nombre.includes(filtroLower);
+    });
+  }, [especies, filtro]);
+
   if (loading) {
     return <p style={{ textAlign: 'center', color: '#6b7280', padding: '16px' }}>Cargando especies...</p>;
   }
@@ -33,59 +44,129 @@ const EspeciesTable = ({ fondoId }) => {
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#f9fafb' }}>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Fecha</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Especie</th>
-            <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Tipo</th>
-            <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Nominal</th>
-            <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Precio USD</th>
-            <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Total USD</th>
-          </tr>
-        </thead>
-        <tbody>
-          {especies.map(esp => (
-            <tr 
-              key={esp.id_movimiento}
-              style={{ borderBottom: '1px solid #e5e7eb' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
-            >
-              <td style={{ padding: '12px', color: '#111827' }}>
-                {new Date(esp.fecha_alta).toLocaleDateString()}
-              </td>
-              <td style={{ padding: '12px', color: '#111827', fontWeight: '500' }}>
-                {esp.especie || esp.tipo_especie?.nombre || 'Sin especie'}
-              </td>
-              <td style={{ padding: '12px' }}>
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '4px 8px',
-                  borderRadius: '9999px',
-                  fontSize: '0.75rem',
-                  fontWeight: '500',
-                  backgroundColor: esp.tipo_mov === 'compra' ? '#d1fae5' : '#fee2e2',
-                  color: esp.tipo_mov === 'compra' ? '#065f46' : '#991b1b'
-                }}>
-                  {esp.tipo_mov === 'compra' ? '↗ Compra' : '↘ Venta'}
-                </span>
-              </td>
-              <td style={{ padding: '12px', textAlign: 'right', color: '#111827' }}>
-                {Number(esp.nominal || 0).toFixed(2)}
-              </td>
-              <td style={{ padding: '12px', textAlign: 'right', color: '#111827' }}>
-                ${Number(esp.precio_usd || 0).toFixed(2)}
-              </td>
-              <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#111827' }}>
-                ${Number((esp.nominal || 0) * (esp.precio_usd || 0)).toFixed(2)}
-              </td>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Barra de filtro */}
+      <div style={{ position: 'relative' }}>
+        <input
+          type="text"
+          placeholder="🔍 Buscar especie..."
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            fontSize: '0.875rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            outline: 'none',
+            transition: 'border-color 0.2s, box-shadow 0.2s'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = '#3b82f6';
+            e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = '#d1d5db';
+            e.target.style.boxShadow = 'none';
+          }}
+        />
+        {filtro && (
+          <button
+            onClick={() => setFiltro('')}
+            style={{
+              position: 'absolute',
+              right: '10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'transparent',
+              border: 'none',
+              color: '#6b7280',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              padding: '4px'
+            }}
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {/* Contador de resultados */}
+      {filtro && (
+        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
+          Mostrando {especiesFiltradas.length} de {especies.length} especies
+        </p>
+      )}
+
+      {/* Tabla con scroll */}
+      <div style={{ 
+        overflowX: 'auto',
+        overflowY: 'auto',
+        maxHeight: '400px',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px'
+      }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+          <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+            <tr style={{ backgroundColor: '#f9fafb' }}>
+              <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Fecha</th>
+              <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Especie</th>
+              <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Tipo</th>
+              <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Nominal</th>
+              <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Precio USD</th>
+              <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: '600', color: '#6b7280', textTransform: 'uppercase', borderBottom: '1px solid #e5e7eb' }}>Total USD</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {especiesFiltradas.length === 0 ? (
+              <tr>
+                <td colSpan="6" style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
+                  No se encontraron especies con "{filtro}"
+                </td>
+              </tr>
+            ) : (
+              especiesFiltradas.map(esp => (
+                <tr 
+                  key={esp.id_movimiento}
+                  style={{ borderBottom: '1px solid #e5e7eb', backgroundColor: '#fff' }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                >
+                  <td style={{ padding: '12px', color: '#111827' }}>
+                    {new Date(esp.fecha_alta).toLocaleDateString()}
+                  </td>
+                  <td style={{ padding: '12px', color: '#111827', fontWeight: '500' }}>
+                    {esp.especie || esp.tipo_especie?.nombre || 'Sin especie'}
+                  </td>
+                  <td style={{ padding: '12px' }}>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '4px 8px',
+                      borderRadius: '9999px',
+                      fontSize: '0.75rem',
+                      fontWeight: '500',
+                      backgroundColor: esp.tipo_mov === 'compra' ? '#d1fae5' : '#fee2e2',
+                      color: esp.tipo_mov === 'compra' ? '#065f46' : '#991b1b'
+                    }}>
+                      {esp.tipo_mov === 'compra' ? '↗ Compra' : '↘ Venta'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'right', color: '#111827' }}>
+                    {Number(esp.nominal || 0).toFixed(2)}
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'right', color: '#111827' }}>
+                    ${Number(esp.precio_usd || 0).toFixed(2)}
+                  </td>
+                  <td style={{ padding: '12px', textAlign: 'right', fontWeight: '600', color: '#111827' }}>
+                    ${Number((esp.nominal || 0) * (esp.precio_usd || 0)).toFixed(2)}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

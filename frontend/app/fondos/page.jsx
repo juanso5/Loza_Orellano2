@@ -169,40 +169,40 @@ const FondosPageContent = () => {
         // Enriquecer fondos con precios y rendimiento
         const portfoliosEnriquecidos = portfoliosConLiquidez.map(p => {
           const fundsEnriquecidos = p.funds.map(f => {
-            const fundKey = normalizeSimple(f.name);
-            const precioActualARS = pricesMap[fundKey] || 0;
-            
-            // Calcular precio promedio de compra (precio_usd de los movimientos de este fondo)
-            const movsDelFondo = movements.filter(m => 
-              m.portfolioId === p.id && 
-              normalizeSimple(m.fund) === fundKey
+          const fundKey = f.tipo_especie_nombre ? normalizeSimple(f.tipo_especie_nombre) : null;
+          // pricesMap ahora contiene precios en USD normalizados
+          const precioActualUSD = pricesMap[fundKey] || 0;
+          const precioActualARS = precioActualUSD; // Mantenemos el alias por compatibilidad
+
+          // Calc precio promedio de compra
+          let precioPromedioUSD = 0;
+          if (movements && f.tipo_especie_id) {
+            const movs = movements.filter((m) =>
+              Number(m?.tipo_especie_id) === Number(f.tipo_especie_id) && m.operacion === 'COMPRA'
             );
-            
-            let precioPromedioUSD = 0;
-            let totalCompras = 0;
-            
-            for (const mov of movsDelFondo) {
-              if (mov.type === 'compra' && mov.priceUsd && mov.priceUsd > 0) {
-                precioPromedioUSD += mov.priceUsd * mov.amount;
-                totalCompras += mov.amount;
-              }
+            if (movs.length > 0) {
+              const sumPorPrecio = movs.reduce((s, m) => {
+                const n = Number(m.nominal || 0);
+                const p = Number(m.precio_compra_usd || 0);
+                return s + n * p;
+              }, 0);
+              const sumNominal = movs.reduce((s, m) => s + Number(m.nominal || 0), 0);
+              precioPromedioUSD = sumNominal > 0 ? sumPorPrecio / sumNominal : 0;
             }
-            
-            if (totalCompras > 0) {
-              precioPromedioUSD = precioPromedioUSD / totalCompras;
-            }
-            
-            // Calcular rendimiento: (precioActualARS - precioPromedioUSD) / precioPromedioUSD
-            const totalReturn = precioPromedioUSD > 0 
-              ? (precioActualARS - precioPromedioUSD) / precioPromedioUSD 
-              : 0;
-            
-            return {
-              ...f,
-              precioActualARS,
-              precioPromedioUSD,
-              totalReturn
-            };
+          }
+
+          // Retorno (ahora en USD)
+          const currentValuation = (f.nominal || 0) * precioActualUSD;
+          const costBasis = (f.nominal || 0) * precioPromedioUSD;
+          const totalReturn = costBasis > 0 ? ((currentValuation - costBasis) / costBasis) * 100 : 0;
+
+          return {
+            ...f,
+            precioActualUSD, // Precio actual en USD
+            precioActualARS, // Alias para compatibilidad
+            precioPromedioUSD,
+            totalReturn,
+          };
           });
           
           return {

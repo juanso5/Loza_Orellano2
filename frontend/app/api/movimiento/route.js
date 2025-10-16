@@ -135,7 +135,7 @@ export async function GET(req) {
     if (action === "latestPrecios") {
       const { data, error } = await sb
         .from("precio_especie")
-        .select("tipo_especie_id,precio,fecha,tipo_especie:tipo_especie_id(id_tipo_especie,nombre)")
+        .select("tipo_especie_id,precio,precio_usd,moneda,tipo_cambio_usado,fecha,tipo_especie:tipo_especie_id(id_tipo_especie,nombre)")
         .order("tipo_especie_id", { ascending: true })
         .order("fecha", { ascending: false })
         .limit(20000);
@@ -145,10 +145,16 @@ export async function GET(req) {
       for (const r of data || []) {
         const id = Number(r.tipo_especie_id);
         if (!latestById.has(id)) {
+          // Usar precio_usd (normalizado) si existe, sino precio original
+          const precioUSD = r.precio_usd != null ? Number(r.precio_usd) : Number(r.precio);
+          
           latestById.set(id, {
             tipo_especie_id: id,
             nombre: r?.tipo_especie?.nombre ?? null,
-            precio: Number(r.precio),
+            precio: Number(r.precio), // Precio original (puede ser ARS)
+            precio_usd: precioUSD, // Precio normalizado en USD
+            moneda: r.moneda || 'USD',
+            tipo_cambio_usado: r.tipo_cambio_usado,
             fecha: r.fecha,
           });
         }

@@ -10,6 +10,7 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
   const [error, setError] = useState(null);
   const [detalleMovimiento, setDetalleMovimiento] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [filtroEspecie, setFiltroEspecie] = useState('');
   
   useEffect(() => {
     if (!fondo?.id_fondo) return;
@@ -198,7 +199,64 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
           
           {!loading && !error && (
             <>
-              {/* Tabla de Tenencias */}
+              {/* Barra de filtro */}
+              {tenencias.length > 0 && (
+                <div style={{ marginBottom: '1rem', position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar especie..."
+                    value={filtroEspecie}
+                    onChange={(e) => setFiltroEspecie(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 40px 10px 16px',
+                      fontSize: '0.875rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      transition: 'border-color 0.2s, box-shadow 0.2s'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = '#3b82f6';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = '#d1d5db';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                  {filtroEspecie && (
+                    <button
+                      onClick={() => setFiltroEspecie('')}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#6b7280',
+                        cursor: 'pointer',
+                        fontSize: '1rem',
+                        padding: '4px'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Contador de resultados filtrados */}
+              {filtroEspecie && tenencias.length > 0 && (
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+                  Mostrando {tenencias.filter(t => 
+                    (t.especie_nombre || '').toLowerCase().includes(filtroEspecie.toLowerCase())
+                  ).length} de {tenencias.length} especies
+                </p>
+              )}
+
+              {/* Tabla de Tenencias con scroll */}
               {tenencias.length > 0 ? (
                 <div style={{ 
                   background: '#fff',
@@ -206,31 +264,41 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
                   borderRadius: '12px',
                   overflow: 'hidden'
                 }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
-                          Especie
-                        </th>
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
-                          Cantidad
-                        </th>
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
-                          Precio Promedio
-                        </th>
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
-                          Precio Actual
-                        </th>
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
-                          Valor Total
-                        </th>
-                        <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
-                          Rendimiento
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tenencias.map((t, idx) => (
+                  <div style={{ 
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    overflowX: 'auto'
+                  }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                        <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
+                            Especie
+                          </th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
+                            Cantidad
+                          </th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
+                            Precio Promedio
+                          </th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
+                            Precio Actual
+                          </th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
+                            Valor Total
+                          </th>
+                          <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
+                            Rendimiento
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tenencias
+                          .filter(t => 
+                            !filtroEspecie || 
+                            (t.especie_nombre || '').toLowerCase().includes(filtroEspecie.toLowerCase())
+                          )
+                          .map((t, idx) => (
                         <tr 
                           key={idx}
                           onClick={() => onSelectEspecie?.(t)}
@@ -330,6 +398,7 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               ) : (
                 <div style={{ 
