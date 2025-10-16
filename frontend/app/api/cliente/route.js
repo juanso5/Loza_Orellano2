@@ -25,7 +25,6 @@ const mapRow = (r) => {
     riskProfile: r.perfil || "",
     comments,
     banks: bankName ? [{ name: bankName, alias }] : [],
-    joinedAt: r.fecha_alta || null,
   };
 };
 
@@ -64,15 +63,7 @@ function normalizeBody(body) {
   let comentario = (body.comentario ?? body.comments ?? "").toString().trim();
   comentario = comentario === "" ? null : comentario;
 
-  // Procesar fecha_alta: si no viene, usar la fecha actual
-  let fecha_alta = body.fecha_alta ?? null;
-  if (!fecha_alta || fecha_alta === "") {
-    // Si no hay fecha, usar la fecha actual en formato YYYY-MM-DD
-    const now = new Date();
-    fecha_alta = now.toISOString().split('T')[0];
-  }
-
-  return { values: { nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario, fecha_alta } };
+  return { values: { nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario } };
 }
 
 export async function GET() {
@@ -82,7 +73,7 @@ export async function GET() {
     const supabase = await getSb();
     const { data, error } = await supabase
       .from("cliente")
-      .select("id_cliente, nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario, fecha_alta")
+      .select("id_cliente, nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario")
       .order("id_cliente", { ascending: true });
 
     if (error) throw error;
@@ -105,7 +96,7 @@ export async function POST(request) {
     const { data, error: err } = await supabase
       .from("cliente")
       .insert([values])
-      .select("id_cliente, nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario, fecha_alta")
+      .select("id_cliente, nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario")
       .single();
 
     if (err) throw err;
@@ -168,11 +159,6 @@ export async function PATCH(request) {
       const c = (body.comentario ?? body.comments ?? "").toString().trim();
       patch.comentario = c === "" ? null : c;
     }
-    
-    // Permitir actualizar fecha_alta si se envía
-    if (body.fecha_alta !== undefined) {
-      patch.fecha_alta = body.fecha_alta || null;
-    }
 
     if (Object.keys(patch).length === 0) return NextResponse.json({ error: "Sin cambios" }, { status: 400 });
 
@@ -180,7 +166,7 @@ export async function PATCH(request) {
       .from("cliente")
       .update(patch)
       .eq("id_cliente", Number(id))
-      .select("id_cliente, nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario, fecha_alta")
+      .select("id_cliente, nombre, tipo_servicio, celular, alias, arancel, periodo, perfil, banco, comentario")
       .single();
 
     if (err) throw err;

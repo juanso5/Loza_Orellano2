@@ -1,8 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertAuthenticated } from "../../../lib/authGuard";
 import { getSSRClient } from "../../../lib/supabaseServer";
-import { validarSaldoParaCompra } from "../../../lib/fondoHelpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -198,218 +197,200 @@ export async function GET(req) {
 export async function POST(req) {
   const auth = await assertAuthenticated(req);
   if (!auth.ok) return auth.res;
-
   try {
     const sb = await getSb();
     const body = await req.json().catch(() => ({}));
-    
-    // Verificar si es acci├│n de upsertPrecios
-    if (body.action === "upsertPrecios") {
+
+    // Acción: upsert de precios desde CSV
+    if (body?.action === "upsertPrecios") {
       const parsed = upsertPreciosSchema.safeParse(body);
       if (!parsed.success) {
-        const details = parsed.error.issues?.map(i => `${i.path.join(".")}: ${i.message}`).join("; ");
-        return NextResponse.json({ error: `Datos inv├ílidos: ${details || "Error de validaci├│n"}` }, { status: 400 });
+        const details = parsed.error.issues?.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+        return NextResponse.json({ error: `Datos inválidos: ${details}` }, { status: 400 });
       }
-      
-      const { fecha, items } = parsed.data;
-      const targetDate = toYmd(fecha);
-      if (!targetDate) {
-        return NextResponse.json({ error: "fecha inv├ílida" }, { status: 400 });
+      const startIso = toIsoStartOfDay(parsed.data.fecha) || toIsoStartOfDay(new Date().toISOString());
+
+      const dayStart = startIso;
+      const dayEnd = (() => {
+        const d = new Date(startIso);
+        d.setUTCDate(d.getUTCDate() + 1);
+        d.setUTCHours(0,0,0,0);
+        return d.toISOString();
+      })();
+
+      async function getOrCreateEspecieId(nombre) {
+        const name = (nombre || '').trim();
+        if (!name) throw new Error('Instrumento vacío');
+
+        let q = await sb.from('tipo_especie')
+          .select('id_tipo_especie,nombre')
+          .eq('nombre', name)
+          .limit(1);
+        if (q.error) throw q.error;
+        if (q.data?.[0]) return Number(q.data[0].id_tipo_especie);
+
+        const q2 = await sb.from('tipo_especie')
+          .select('id_tipo_especie,nombre')
+          .ilike('nombre', name)
+          .limit(10);
+        if (q2.error) throw q2.error;
+        const exactCI = (q2.data || []).find(r => String(r.nombre).toLowerCase() === name.toLowerCase());
+        if (exactCI) return Number(exactCI.id_tipo_especie);
+
+        const ins = await sb.from('tipo_especie')
+          .insert({ nombre: name })
+          .select('id_tipo_especie')
+          .single();
+        if (ins.error) throw ins.error;
+        return Number(ins.data.id_tipo_especie);
       }
 
-      let exitosos = 0;
-      let fallidos = 0;
-      const errores = [];
+      async function upsertRow(row) {
+        const sel = await sb.from('precio_especie')
+          .select('id_especie, tipo_especie_id, fecha, precio')
+          .eq('tipo_especie_id', row.tipo_especie_id)
+          .gte('fecha', dayStart)
+          .lt('fecha', dayEnd)
+          .limit(1)
+          .maybeSingle();
+        if (sel.error) throw sel.error;
 
-      for (const item of items) {
-        const nombre = (item.instrumento || "").toString().trim();
-        if (!nombre) {
-          fallidos++;
-          continue;
-        }
-
-        try {
-          // Buscar o crear el tipo_especie
-          let tipoEspecieId = null;
-          
-          const { data: existingEspecie, error: selectError } = await sb
-            .from("tipo_especie")
-            .select("id_tipo_especie")
-            .eq("nombre", nombre)
-            .maybeSingle();
-
-          if (selectError) {
-            console.error(`Error buscando especie ${nombre}:`, selectError);
-            errores.push(`${nombre}: ${selectError.message}`);
-            fallidos++;
-            continue;
-          }
-
-          if (existingEspecie) {
-            tipoEspecieId = existingEspecie.id_tipo_especie;
-          } else {
-            // Crear nueva especie si no existe
-            const { data: newEspecie, error: createError } = await sb
-              .from("tipo_especie")
-              .insert({ nombre })
-              .select("id_tipo_especie")
-              .single();
-            
-            if (createError) {
-              console.error(`Error creando especie ${nombre}:`, createError);
-              errores.push(`${nombre}: ${createError.message}`);
-              fallidos++;
-              continue;
-            }
-            tipoEspecieId = newEspecie.id_tipo_especie;
-          }
-
-          // Ahora insertar el precio con tipo_especie_id
-          const { error: upsertError } = await sb.from("precio_especie").upsert(
-            { 
-              tipo_especie_id: tipoEspecieId,
-              fecha: targetDate, 
-              precio: parseFloat(item.precio)
-            },
-            { onConflict: "tipo_especie_id,fecha", ignoreDuplicates: false }
-          );
-          
-          if (upsertError) {
-            console.error(`Error upsert precio ${nombre}:`, upsertError);
-            errores.push(`${nombre}: ${upsertError.message}`);
-            fallidos++;
-          } else {
-            exitosos++;
-          }
-        } catch (err) {
-          console.error(`Error procesando ${nombre}:`, err);
-          errores.push(`${nombre}: ${err.message}`);
-          fallidos++;
+        if (sel.data) {
+          const upd = await sb.from('precio_especie')
+            .update({ precio: row.precio, fecha: row.fecha })
+            .eq('id_especie', sel.data.id_especie)
+            .select('id_especie');
+          if (upd.error) throw upd.error;
+          return upd.data?.[0]?.id_especie ?? sel.data.id_especie;
+        } else {
+          const ins = await sb.from('precio_especie')
+            .insert(row)
+            .select('id_especie')
+            .single();
+          if (ins.error) throw ins.error;
+          return ins.data.id_especie;
         }
       }
 
-      const mensaje = `Procesados: ${exitosos} exitosos, ${fallidos} fallidos de ${items.length} total`;
-      console.log(mensaje);
-      if (errores.length > 0) {
-        console.log("Primeros errores:", errores.slice(0, 5));
+      const savedIds = [];
+      for (const it of parsed.data.items) {
+        const tipoEspecieId = await getOrCreateEspecieId(it.instrumento);
+        const id = await upsertRow({
+          tipo_especie_id: tipoEspecieId,
+          fecha: startIso,
+          precio: Number(it.precio),
+        });
+        savedIds.push(id);
       }
 
-      return NextResponse.json({ 
-        success: true, 
-        message: mensaje,
-        exitosos,
-        fallidos,
-        errores: errores.slice(0, 10) // Solo los primeros 10 errores
-      });
+      return NextResponse.json({ data: { saved: savedIds.length } }, { status: 201 });
     }
 
-    // Validar movimiento normal
+    // Alta de movimiento
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) {
-      const details = parsed.error.issues?.map(i => `${i.path.join(".")}: ${i.message}`).join("; ");
-      return NextResponse.json({ error: `Datos inv├ílidos: ${details}` }, { status: 400 });
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
     const {
       cliente_id,
       fondo_id,
-      tipo_especie_id,
       fecha_alta,
-      precio_usd,
       tipo_mov,
       nominal,
+      precio_usd,
+      tipo_especie_id,
       especie,
     } = parsed.data;
 
-    // 🔥 VALIDAR LIQUIDEZ DEL FONDO PARA COMPRAS
-    if (tipo_mov === "compra") {
-      // Validar que precio_usd sea válido
-      const precioNum = parseFloat(precio_usd);
-      if (!precio_usd || isNaN(precioNum) || precioNum <= 0) {
-        return NextResponse.json({
-          error: "Para una compra se requiere un precio_usd válido y mayor a 0"
-        }, { status: 400 });
-      }
-
-      const nominalNum = parseInt(nominal);
-      if (isNaN(nominalNum) || nominalNum <= 0) {
-        return NextResponse.json({
-          error: "El nominal debe ser un número válido y mayor a 0"
-        }, { status: 400 });
-      }
-
-      const costoCompra = precioNum * nominalNum;
-      
-      // Importar helper
-      const { validarSaldoParaCompra } = await import("../../../lib/fondoHelpers");
-      const validacion = await validarSaldoParaCompra(sb, cliente_id, fondo_id, costoCompra);
-      
-      if (!validacion.valido) {
-        return NextResponse.json({
-          error: `El fondo no tiene liquidez suficiente. Disponible: $${validacion.disponible.toFixed(2)} USD. Necesario: $${costoCompra.toFixed(2)} USD`,
-          disponible: validacion.disponible,
-          faltante: validacion.faltante
-        }, { status: 400 });
-      }
-    }
-
-    // Validar que el cliente_id coincida con el del fondo
-    const { data: fondoData, error: fondoErr } = await sb
-      .from("fondo")
-      .select("cliente_id")
-      .eq("id_fondo", fondo_id)
-      .single();
-
-    if (fondoErr || !fondoData) {
-      return NextResponse.json({ error: "Fondo no encontrado" }, { status: 404 });
-    }
-
-    if (Number(fondoData.cliente_id) !== Number(cliente_id)) {
-      return NextResponse.json(
-        { error: "El fondo no pertenece al cliente especificado" },
-        { status: 403 }
-      );
-    }
-
-    // Si se proporciona especie (nombre) en lugar de tipo_especie_id, buscar/crear
-    let finalTipoEspecieId = tipo_especie_id;
-    
-    if (!finalTipoEspecieId && especie) {
-      const especieTrim = especie.trim();
-      const { data: existing } = await sb
-        .from("tipo_especie")
-        .select("id_tipo_especie")
-        .eq("nombre", especieTrim)
+    async function assertFondoBelongs(client, fondoId, clienteId) {
+      const { data, error } = await client
+        .from("fondo")
+        .select("id_fondo,cliente_id")
+        .eq("id_fondo", fondoId)
         .single();
-
-      if (existing) {
-        finalTipoEspecieId = existing.id_tipo_especie;
-      } else {
-        const { data: created, error: createErr } = await sb
-          .from("tipo_especie")
-          .insert({ nombre: especieTrim })
-          .select("id_tipo_especie")
-          .single();
-
-        if (createErr) {
-          return NextResponse.json({ error: `Error creando especie: ${createErr.message}` }, { status: 500 });
-        }
-        finalTipoEspecieId = created.id_tipo_especie;
+      if (error) throw error;
+      if (!data || Number(data.cliente_id) !== Number(clienteId)) {
+        const err = new Error("El fondo no pertenece al cliente indicado");
+        err.status = 400;
+        throw err;
       }
     }
 
-    if (!finalTipoEspecieId) {
-      return NextResponse.json({ error: "Se requiere tipo_especie_id o especie" }, { status: 400 });
+    async function resolveTipoEspecieId(client, maybeId, maybeName) {
+      if (maybeId) return Number(maybeId);
+      const name = (maybeName || "").trim();
+      if (!name) {
+        const err = new Error("Debe indicar tipo_especie_id o nombre de especie");
+        err.status = 400;
+        throw err;
+      }
+      let q = await client
+        .from("tipo_especie")
+        .select("id_tipo_especie,nombre")
+        .eq("nombre", name)
+        .limit(1);
+      if (q.error) throw q.error;
+      if (q.data?.[0]) return Number(q.data[0].id_tipo_especie);
+
+      const q2 = await client
+        .from("tipo_especie")
+        .select("id_tipo_especie,nombre")
+        .ilike("nombre", name)
+        .limit(10);
+      if (q2.error) throw q2.error;
+      const exactCI = (q2.data || []).find(r => String(r.nombre).toLowerCase() === name.toLowerCase());
+      if (exactCI) return Number(exactCI.id_tipo_especie);
+
+      const ins = await client
+        .from("tipo_especie")
+        .insert({ nombre: name })
+        .select("id_tipo_especie")
+        .single();
+      if (ins.error) throw ins.error;
+      return Number(ins.data.id_tipo_especie);
+    }
+
+    async function computeDisponible(client, cliente_id, fondo_id, tipo_especie_id, fecha_alta) {
+      const end = fecha_alta ? toIsoEndOfDay(fecha_alta) : null;
+      let q = client
+        .from("movimiento")
+        .select("tipo_mov,nominal")
+        .eq("cliente_id", cliente_id)
+        .eq("fondo_id", fondo_id)
+        .eq("tipo_especie_id", tipo_especie_id);
+      if (end) q = q.lte("fecha_alta", end);
+      const { data, error } = await q.limit(10000);
+      if (error) throw error;
+      let disponible = 0;
+      for (const r of data || []) {
+        const n = Number(r.nominal) || 0;
+        disponible += r.tipo_mov === "venta" ? -n : n;
+      }
+      return disponible;
+    }
+
+    await assertFondoBelongs(sb, fondo_id, cliente_id);
+    const especieId = await resolveTipoEspecieId(sb, tipo_especie_id, especie);
+
+    if (tipo_mov === "venta") {
+      const disponible = await computeDisponible(sb, cliente_id, fondo_id, especieId, fecha_alta);
+      if (nominal > disponible) {
+        return NextResponse.json(
+          { error: `No hay suficiente disponible. Disponible: ${disponible}` },
+          { status: 400 }
+        );
+      }
     }
 
     const payload = {
       cliente_id,
       fondo_id,
-      tipo_especie_id: finalTipoEspecieId,
-      fecha_alta: fecha_alta || new Date().toISOString(),
-      precio_usd: precio_usd != null ? parseFloat(precio_usd) : null,
+      fecha_alta: toIsoStartOfDay(fecha_alta) || new Date().toISOString(),
       tipo_mov,
-      nominal: parseInt(nominal),
+      nominal,
+      precio_usd: precio_usd ?? null,
+      tipo_especie_id: especieId,
     };
 
     const { data, error } = await sb
@@ -417,100 +398,13 @@ export async function POST(req) {
       .insert(payload)
       .select(SELECT_BASE)
       .single();
-
     if (error) throw error;
 
-    // 🔥 INTEGRACIÓN AUTOMÁTICA CON LIQUIDEZ
-    const precioNum = parseFloat(precio_usd);
-    const nominalNum = parseInt(nominal);
-    const tienePrecioValido = precio_usd && !isNaN(precioNum) && precioNum > 0;
-    const montoMovimiento = tienePrecioValido ? precioNum * nominalNum : 0;
-    const especieNombre = data.tipo_especie?.nombre || 'especie';
-    const resultado = {
-      data: mapRow(data),
-      liquidezAjustada: false,
-      movLiquidezCreado: false,
-    };
-
-    try {
-      if (tipo_mov === "compra") {
-        // COMPRA: Descontar liquidez del fondo
-        const comentarioCompra = `Compra automática: ${nominal} ${especieNombre} @ $${precio_usd}`;
-        
-        const { error: asignError } = await sb
-          .from("asignacion_liquidez")
-          .insert({
-            cliente_id: Number(cliente_id),
-            fondo_id: Number(fondo_id),
-            fecha: new Date().toISOString(),
-            tipo_operacion: "desasignacion",
-            monto_usd: montoMovimiento,
-            comentario: comentarioCompra,
-          });
-
-        if (asignError) {
-          console.error("⚠️ Error descontando liquidez del fondo:", asignError);
-        } else {
-          resultado.liquidezAjustada = true;
-        }
-
-      } else if (tipo_mov === "venta") {
-        // VENTA: Crear mov_liquidez (depósito) + Asignar al fondo
-        // Solo si hay precio válido
-        if (tienePrecioValido && montoMovimiento > 0) {
-          const comentarioVenta = `Recupero por venta de ${nominal} ${especieNombre} @ $${precio_usd}`;
-
-          // 1. Crear movimiento de liquidez (depósito)
-          const { data: movLiq, error: movLiqError } = await sb
-            .from("mov_liquidez")
-            .insert({
-              cliente_id: Number(cliente_id),
-              tipo_mov: "deposito",
-              monto: montoMovimiento,
-              moneda: "USD",
-              tipo_cambio_usado: 1.0,
-              fecha: new Date().toISOString(),
-              comentario: comentarioVenta,
-            })
-            .select()
-            .single();
-
-          if (movLiqError) {
-            console.error("⚠️ Error creando mov_liquidez:", movLiqError);
-          } else {
-            resultado.movLiquidezCreado = true;
-            
-            // 2. Asignar liquidez automáticamente al fondo
-            const { error: asignError } = await sb
-              .from("asignacion_liquidez")
-              .insert({
-                cliente_id: Number(cliente_id),
-                fondo_id: Number(fondo_id),
-                fecha: new Date().toISOString(),
-                tipo_operacion: "asignacion",
-                monto_usd: montoMovimiento,
-                comentario: `Asignación automática: ${comentarioVenta}`,
-              });
-
-            if (asignError) {
-              console.error("⚠️ Error asignando liquidez al fondo:", asignError);
-            } else {
-              resultado.liquidezAjustada = true;
-            }
-          }
-        } else {
-          console.log("ℹ️ Venta sin precio válido, no se crea mov_liquidez");
-        }
-      }
-    } catch (liquidezError) {
-      console.error("⚠️ Error en integración de liquidez:", liquidezError);
-      // No lanzar error para no bloquear el movimiento
-    }
-
-    return NextResponse.json(resultado, { status: 201 });
+    return NextResponse.json({ data: mapRow(data) }, { status: 201 });
   } catch (e) {
     console.error("POST /api/movimiento error:", e);
-    return NextResponse.json({ error: e?.message || "Error al crear movimiento" }, { status: 500 });
+    const status = e?.status || 500;
+    return NextResponse.json({ error: e?.message || "Error al crear movimiento", details: e }, { status });
   }
 }
 
@@ -616,7 +510,7 @@ export async function DELETE(req) {
     const body = await req.json().catch(() => ({}));
     const parsed = z.object({ id: z.coerce.number().int().positive() }).safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: "Falta id v├ílido" }, { status: 400 });
+      return NextResponse.json({ error: "Falta id válido" }, { status: 400 });
     }
 
     const { error } = await sb.from("movimiento").delete().eq("id_movimiento", parsed.data.id);

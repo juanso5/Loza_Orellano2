@@ -11,7 +11,6 @@ import Sidebar from "../../components/Sidebar";
 import ConfirmDeleteModal from "../../components/ConfirmDeleteModal";
 import TaskModal from "../../components/TaskModal";
 import TaskListCard from "../../components/TaskListCard";
-import { useLocalStorageState } from "@/lib/hooks";
 
 const PRIORITY_CONFIG = {
   alta: { color: '#e74c3c', className: 'prioridad-alta' },
@@ -44,7 +43,17 @@ export default function HomePage() {
   const loadedFromDbRef = useRef(false);
 
   // Sidebar collapsed con persistencia
-  const [collapsed, setCollapsed] = useLocalStorageState('sidebarCollapsed', false);
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebarCollapsed');
+    if (saved !== null) setCollapsed(JSON.parse(saved));
+  }, []);
+  const toggleSidebar = () => {
+    setCollapsed((prev) => {
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(!prev));
+      return !prev;
+    });
+  };
 
   // Calendar API
   const calendarApi = () => calendarRef.current?.getApi?.();
@@ -341,7 +350,7 @@ export default function HomePage() {
   return (
     <>
       <div id="sidebar-container">
-        <Sidebar collapsed={collapsed} toggleSidebar={() => setCollapsed(c => !c)} />
+        <Sidebar collapsed={collapsed} toggleSidebar={toggleSidebar} />
       </div>
 
       <div className={`main-content ${collapsed ? 'expanded' : ''}`} id="main-content">

@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 import { useEffect, useRef, useState } from 'react';
 import { MovementsProvider, useMovements } from './MovementsProvider';
 import LastMovementsTable from './LastMovementsTable';
 import useDebouncedValue from './useDebouncedValue';
 import ClientsPanel from './ClientsPanel'
-import MovementModal from './MovementModal';
+import MovementModal from './MovementModal';                            
+import ClientsHoldingsList from './ClientsHoldingsList';
 
 function Toolbar({ onAdd }) {
   const fileRef = useRef(null);
@@ -17,7 +18,7 @@ function Toolbar({ onAdd }) {
   const onFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploadState({ status: 'parsing', message: 'Procesando CSVÔÇª' });
+    setUploadState({ status: 'parsing', message: 'Procesando CSV…' });
     try {
       const worker = new Worker(new URL('./csvWorker.js', import.meta.url), { type: 'module' });
       const text = await file.text();
@@ -31,7 +32,7 @@ function Toolbar({ onAdd }) {
           worker.postMessage({ type: 'parse', payload: { csv: text } });
         });
       const { fecha, items } = await parseInWorker();
-      setUploadState({ status: 'uploading', message: 'Enviando preciosÔÇª' });
+      setUploadState({ status: 'uploading', message: 'Enviando precios…' });
       const res = await fetch('/api/movimiento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -41,17 +42,9 @@ function Toolbar({ onAdd }) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error || 'Error al guardar precios');
       }
-      const result = await res.json();
-      const mensaje = result.message || 'Precios actualizados';
-      console.log('Resultado CSV:', result);
-      
-      if (result.errores && result.errores.length > 0) {
-        console.warn('Errores encontrados:', result.errores);
-      }
-      
-      setUploadState({ status: 'done', message: mensaje });
+      setUploadState({ status: 'done', message: 'Precios actualizados' });
       await refreshPrices();       // NUEVO: volver a leer precios desde DB y notificar
-      refreshFirstPage();          // refrescar primeras p├íginas por si hay dependencias
+      refreshFirstPage();          // refrescar primeras páginas por si hay dependencias
     } catch (err) {
       setUploadState({ status: 'error', message: err?.message || String(err) });
     } finally {
@@ -73,8 +66,8 @@ function Toolbar({ onAdd }) {
         <input ref={fileRef} type="file" accept=".csv" onChange={onFileChange} style={{ display: 'none' }} />
         <div className="csv-status" aria-live="polite" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <small>
-            {uploadState.status === 'parsing' && 'Procesando CSVÔÇª'}
-            {uploadState.status === 'uploading' && 'Enviando preciosÔÇª'}
+            {uploadState.status === 'parsing' && 'Procesando CSV…'}
+            {uploadState.status === 'uploading' && 'Enviando precios…'}
             {uploadState.status === 'done' && 'Precios actualizados'}
             {uploadState.status === 'error' && <span style={{ color: '#b00' }}>{uploadState.message}</span>}
           </small>
@@ -96,6 +89,9 @@ function MovementsContent({ onSelectClient, onAdd }) {
 
   return (
     <>
+      {/* NUEVO: resumen por cliente (precios y total patrimonio) */}
+      <ClientsHoldingsList onAdd={onAdd} />
+
       {/* Layout con panel de clientes + tabla virtualizada */}
       <div className="fondos-layout" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 20, alignItems: 'start' }}>
         <ClientsPanel onSelectClient={onSelectClient} />

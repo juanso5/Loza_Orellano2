@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMovements } from './MovementsProvider';
 import ClientHoldingsCard from './ClientHoldingsCard';
-import { fetchClients, filterClientsByQuery } from '@/lib/clientHelpers';
 
 export default function ClientsHoldingsList({ onAdd }) {
   const { query } = useMovements();
@@ -14,7 +13,9 @@ export default function ClientsHoldingsList({ onAdd }) {
     (async () => {
       try {
         setLoading(true);
-        const list = await fetchClients();
+        const res = await fetch('/api/cliente', { cache: 'no-store' });
+        const j = await res.json();
+        const list = Array.isArray(j?.data) ? j.data : [];
         const norm = list.map((c) => ({
           id: Number(c.id ?? c.id_cliente ?? 0),
           name: c.name || c.nombre || '',
@@ -30,7 +31,9 @@ export default function ClientsHoldingsList({ onAdd }) {
   }, []);
 
   const filtered = useMemo(() => {
-    return filterClientsByQuery(clients, query);
+    const q = (query || '').trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(c => c.name.toLowerCase().includes(q));
   }, [clients, query]);
 
   if (loading) return <div className="muted" style={{ padding: 8 }}>Cargando clientes…</div>;

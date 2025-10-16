@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const getSb = () => getSSRClient(); // async
 
 const SELECT_BASE =
-  "id_fondo,cliente_id,tipo_cartera:tipo_cartera_id(id_tipo_cartera,descripcion,categoria,color,icono),plazo,tipo_plazo,fecha_alta,rend_esperado,deposito_inicial,metadata";
+  "id_fondo,cliente_id,tipo_cartera:tipo_cartera_id(id_tipo_cartera,descripcion),plazo,tipo_plazo,fecha_alta,rend_esperado,deposito_inicial";
 
 function toYMD(v) {
   if (!v) return null;
@@ -39,7 +39,6 @@ function mapRow(r) {
     fechaAlta: fecha,
     rendEsperado: r.rend_esperado == null ? null : Number(r.rend_esperado),
     depositoInicial: r.deposito_inicial == null ? null : Number(r.deposito_inicial),
-    metadata: r.metadata || null,
   };
   if (r.tipo_cartera) out.tipo_cartera = r.tipo_cartera;
   return out;
@@ -47,54 +46,21 @@ function mapRow(r) {
 
 // Validaciones
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable();
-
-// Metadata schemas por estrategia
-const metadataJubilacionSchema = z.object({
-  estrategia: z.literal('jubilacion'),
-  edad_actual: z.coerce.number().int().min(18).max(100),
-  edad_objetivo: z.coerce.number().int().min(18).max(100),
-  aporte_mensual: z.coerce.number().nonnegative(),
-  fecha_objetivo: z.string().optional().nullable(),
-}).refine(data => data.edad_objetivo > data.edad_actual, {
-  message: "La edad objetivo debe ser mayor a la edad actual"
-});
-
-const metadataLargoPlazoSchema = z.object({
-  estrategia: z.literal('largo_plazo'),
-  permite_acciones: z.boolean().default(false),
-  descripcion: z.string().optional().nullable(),
-});
-
-const metadataViajesSchema = z.object({
-  estrategia: z.literal('viajes'),
-  monto_objetivo: z.coerce.number().positive(),
-  descripcion: z.string().min(1),
-});
-
-const metadataObjetivoSchema = z.object({
-  estrategia: z.literal('objetivo'),
-  fecha_objetivo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  monto_objetivo: z.coerce.number().positive(),
-  descripcion: z.string().min(1),
-});
-
-const metadataSchema = z.union([
-  metadataJubilacionSchema,
-  metadataLargoPlazoSchema,
-  metadataViajesSchema,
-  metadataObjetivoSchema,
-]).optional().nullable();
-
-const createSchema = z.object({
-  cliente_id: z.coerce.number().int().positive(),
-  tipo_cartera_id: z.coerce.number().int().positive(),
-  deposito_inicial: z.coerce.number().nonnegative().default(0),
-  plazo: z.coerce.number().int().positive().optional().nullable(),
-  tipo_plazo: z.string().optional().nullable(),
-  rend_esperado: z.coerce.number().optional().nullable(),
-  liquidez_inicial: z.coerce.number().nonnegative().optional().default(0),
-  metadata: metadataSchema,
-});
+const createSchema = z
+  .object({
+    cliente_id: z.coerce.number().int().positive(),
+    tipo_cartera_id: z.coerce.number().int().positive().optional(),
+    name: z.string().min(1).optional(),
+    tipo_cartera: z.string().min(1).optional(),
+    descripcion: z.string().min(1).optional(),
+    periodMonths: z.coerce.number().int().min(0).optional().nullable(),
+    plazo: z.coerce.number().int().min(0).optional().nullable(),
+    tipo_plazo: z.enum(["dias", "meses"]).optional().nullable(),
+    fecha_alta: ymd,
+    rend_esperado: z.coerce.number().optional().nullable(),
+    deposito_inicial: z.coerce.number().optional().nullable(),
+  })
+  .passthrough();
 
 const updateSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -105,7 +71,6 @@ const updateSchema = z.object({
   fecha_alta: ymd,
   rend_esperado: z.coerce.number().optional().nullable(),
   deposito_inicial: z.coerce.number().optional().nullable(),
-  metadata: metadataSchema,
 });
 const deleteSchema = z.object({ id: z.coerce.number().int().positive() });
 
@@ -148,121 +113,86 @@ export async function GET(req) {
 export async function POST(req) {
   const auth = await assertAuthenticated(req);
   if (!auth.ok) return auth.res;
-
   try {
     const sb = await getSb();
     const body = await req.json().catch(() => ({}));
     const parsed = createSchema.safeParse(body);
-
     if (!parsed.success) {
-      const details = parsed.error.issues?.map(i => `${i.path.join(".")}: ${i.message}`).join("; ");
-      return NextResponse.json(
-        { success: false, error: `Datos inválidos: ${details}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
     const {
       cliente_id,
       tipo_cartera_id,
-      deposito_inicial,
+      name,
+      tipo_cartera,
+      descripcion,
+      periodMonths,
       plazo,
       tipo_plazo,
+      fecha_alta,
       rend_esperado,
-      liquidez_inicial,
-      metadata
+      deposito_inicial,
     } = parsed.data;
 
-    // Si hay liquidez_inicial, validar primero
-    if (liquidez_inicial > 0) {
-      const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-      const estadoRes = await fetch(
-        `${baseUrl}/api/liquidez/estado?cliente_id=${cliente_id}`,
-        { headers: req.headers }
-      );
-      const estadoJson = await estadoRes.json().catch(() => ({ success: false }));
+    let tipoId = tipo_cartera_id ?? null;
+    const nombreTipo = (name || tipo_cartera || descripcion || "").toString().trim();
 
-      if (!estadoJson.success || estadoJson.data?.liquidezDisponible < liquidez_inicial) {
-        return NextResponse.json({
-          success: false,
-          error: `Liquidez insuficiente. Disponible: $${estadoJson.data?.liquidezDisponible?.toFixed(2) || '0.00'} USD`,
-          detalles: {
-            requerido: liquidez_inicial,
-            disponible: estadoJson.data?.liquidezDisponible || 0,
-            total: estadoJson.data?.liquidezTotal || 0
-          }
-        }, { status: 400 });
+    // Buscar/crear tipo_cartera sin usar single/maybeSingle (para evitar errores por 0 o N filas)
+    if (!tipoId) {
+      if (!nombreTipo) {
+        return NextResponse.json(
+          { error: "Debe enviar tipo_cartera_id o un nombre (name/tipo_cartera/descripcion)" },
+          { status: 400 }
+        );
       }
+      const found = await sb
+        .from("tipo_cartera")
+        .select("id_tipo_cartera,descripcion")
+        .ilike("descripcion", nombreTipo)
+        .limit(1);
+      if (found.error) throw found.error;
+      let tipo = found.data?.[0] ?? null;
+      if (!tipo) {
+        const ins = await sb
+          .from("tipo_cartera")
+          .insert({ descripcion: nombreTipo })
+          .select("id_tipo_cartera,descripcion")
+          .single();
+        if (ins.error) throw ins.error;
+        tipo = ins.data;
+      }
+      tipoId = Number(tipo.id_tipo_cartera);
     }
 
-    // 1. Crear el fondo
+    const payloadPlazo =
+      periodMonths != null
+        ? { plazo: Number(periodMonths), tipo_plazo: "meses" }
+        : {
+            plazo: plazo ?? null,
+            tipo_plazo: tipo_plazo ?? (plazo != null ? "meses" : null),
+          };
+
     const payload = {
       cliente_id,
-      tipo_cartera_id,
-      deposito_inicial: parseFloat(deposito_inicial),
-      plazo,
-      tipo_plazo,
-      rend_esperado: rend_esperado ? parseFloat(rend_esperado) : null,
-      fecha_alta: new Date().toISOString(),
-      metadata: metadata || null,
+      tipo_cartera_id: tipoId,
+      ...payloadPlazo,
+      fecha_alta: toYMD(fecha_alta) || toYMD(new Date()),
+      rend_esperado: rend_esperado ?? null,
+      deposito_inicial: deposito_inicial ?? null,
     };
 
-    const { data: fondoData, error: fondoError } = await sb
+    const { data, error } = await sb
       .from("fondo")
       .insert(payload)
       .select(SELECT_BASE)
       .single();
 
-    if (fondoError) throw fondoError;
-
-    // 2. Si hay liquidez_inicial, asignarla automáticamente
-    if (liquidez_inicial > 0) {
-      const baseUrl = process.env.NEXT_PUBLIC_URL || "http://localhost:3000";
-      const asignRes = await fetch(
-        `${baseUrl}/api/liquidez/asignar`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...Object.fromEntries(req.headers.entries ? req.headers.entries() : []),
-          },
-          body: JSON.stringify({
-            cliente_id,
-            fondo_id: fondoData.id_fondo,
-            monto_usd: liquidez_inicial,
-            tipo_operacion: 'asignacion',
-            comentario: `Asignación inicial al crear fondo ${tipo_cartera_id}`,
-          }),
-        }
-      );
-
-      // tolerar fallo en asignación para no romper creación de fondo
-      try {
-        const asignJson = await asignRes.json();
-        if (!asignJson.success) {
-          console.error('Error asignando liquidez inicial:', asignJson.error);
-        }
-      } catch (e) {
-        console.error('Error parsing asignacion response:', e);
-      }
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: mapRow(fondoData),
-        message: liquidez_inicial > 0
-          ? `Fondo creado y liquidez inicial de $${liquidez_inicial} asignada`
-          : "Fondo creado exitosamente",
-      },
-      { status: 201 }
-    );
+    if (error) throw error;
+    return NextResponse.json({ data: mapRow(data) }, { status: 201 });
   } catch (e) {
     console.error("POST /api/fondo error:", e);
-    return NextResponse.json(
-      { success: false, error: e?.message || "Error al crear fondo" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Error al crear el fondo" }, { status: 500 });
   }
 }
 
@@ -307,66 +237,12 @@ export async function DELETE(req) {
       return NextResponse.json({ error: "Falta id válido" }, { status: 400 });
     }
 
-    const fondoId = parsed.data.id;
-
-    // Verificar si hay movimientos asociados
-    const { data: movimientos, error: movError } = await supabase
-      .from("movimiento")
-      .select("id_movimiento")
-      .eq("fondo_id", fondoId)
-      .limit(1);
-
-    if (movError) {
-      console.error("Error verificando movimientos:", movError);
-    }
-
-    if (movimientos && movimientos.length > 0) {
-      return NextResponse.json(
-        { 
-          error: "No se puede eliminar esta cartera porque tiene movimientos asociados. Primero eliminá los movimientos.",
-          detalles: "Esta cartera está en uso"
-        },
-        { status: 409 } // 409 Conflict
-      );
-    }
-
-    // Verificar si hay asignaciones de liquidez
-    const { data: liquidez, error: liqError } = await supabase
-      .from("asignacion_liquidez")
-      .select("id_asignacion")
-      .eq("fondo_id", fondoId)
-      .limit(1);
-
-    if (liqError) {
-      console.error("Error verificando liquidez:", liqError);
-    }
-
-    if (liquidez && liquidez.length > 0) {
-      return NextResponse.json(
-        { 
-          error: "No se puede eliminar esta cartera porque tiene asignaciones de liquidez. Primero eliminá las asignaciones.",
-          detalles: "Esta cartera tiene liquidez asignada"
-        },
-        { status: 409 }
-      );
-    }
-
-    // Si no hay dependencias, eliminar
-    const { error } = await supabase.from("fondo").delete().eq("id_fondo", fondoId);
+    const { error } = await supabase.from("fondo").delete().eq("id_fondo", parsed.data.id);
     if (error) throw error;
 
     return new Response(null, { status: 204 });
   } catch (e) {
     console.error("DELETE /api/fondo error:", e);
-    
-    // Mejorar mensaje según el tipo de error
-    let errorMsg = "Error al eliminar el fondo";
-    if (e.code === '23503') { // Foreign key violation
-      errorMsg = "No se puede eliminar esta cartera porque tiene datos relacionados (movimientos o liquidez asignada)";
-    } else if (e.message) {
-      errorMsg = e.message;
-    }
-    
-    return NextResponse.json({ error: errorMsg }, { status: 500 });
+    return NextResponse.json({ error: "Error al eliminar el fondo" }, { status: 500 });
   }
 }

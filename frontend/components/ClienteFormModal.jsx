@@ -42,16 +42,6 @@ export default function ClienteFormModal({ open, onClose, onSave, initial, helpe
     // Compat: reflejar primer banco en bank/bankAlias
     base.bank = banks[0]?.name || "";
     base.bankAlias = banks[0]?.alias || "";
-    
-    // Mapear joinedAt -> joinedLocal para el input date
-    if (base.joinedAt) {
-      // Si es ISO completo, tomar solo la parte de fecha
-      base.joinedLocal = base.joinedAt.split('T')[0];
-    } else {
-      // Si no hay fecha, usar la fecha actual
-      base.joinedLocal = new Date().toISOString().split('T')[0];
-    }
-    
     setValues(base);
     setErrors({});
     // reset edición
