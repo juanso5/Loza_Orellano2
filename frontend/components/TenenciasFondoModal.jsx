@@ -216,6 +216,9 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
                           Cantidad
                         </th>
                         <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
+                          Precio Promedio
+                        </th>
+                        <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
                           Precio Actual
                         </th>
                         <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: '600', textTransform: 'uppercase' }}>
@@ -258,14 +261,54 @@ export default function TenenciasFondoModal({ fondo, onClose, onSelectEspecie, o
                           <td style={{ padding: '0.875rem 1rem', textAlign: 'right', color: '#6b7280', fontWeight: '500' }}>
                             {t.cantidad_actual?.toLocaleString('es-AR') || 0}
                           </td>
+                          <td style={{ padding: '0.875rem 1rem', textAlign: 'right', color: '#6b7280', fontSize: '0.875rem' }}>
+                            {t.precio_promedio_compra_usd 
+                              ? (
+                                <div>
+                                  <div style={{ fontWeight: '600', color: '#111827' }}>
+                                    US$ {t.precio_promedio_compra_usd.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </div>
+                                  {mostrarDualCurrency && tipoCambio && (
+                                    <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px' }}>
+                                      $ {(t.precio_promedio_compra_usd * tipoCambio).toLocaleString('es-AR', { minimumFractionDigits: 2 })} ARS
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                              : <span style={{ color: '#9ca3af' }}>-</span>
+                            }
+                          </td>
                           <td style={{ padding: '0.875rem 1rem', textAlign: 'right', color: '#6b7280' }}>
-                            {t.precio_actual 
-                              ? `$${t.precio_actual.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            {t.precio_actual_usd 
+                              ? (
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                    {t.dias_desde_actualizacion > 7 && (
+                                      <span title={`Precio desactualizado (${t.dias_desde_actualizacion} días)`}>⚠️</span>
+                                    )}
+                                    <span style={{ fontWeight: '600', color: '#111827' }}>
+                                      US$ {t.precio_actual_usd.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                  {mostrarDualCurrency && tipoCambio && (
+                                    <div style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '2px' }}>
+                                      $ {(t.precio_actual_usd * tipoCambio).toLocaleString('es-AR', { minimumFractionDigits: 2 })} ARS
+                                    </div>
+                                  )}
+                                </div>
+                              )
                               : <span style={{ color: '#9ca3af' }}>Sin precio</span>
                             }
                           </td>
                           <td style={{ padding: '0.875rem 1rem', textAlign: 'right', fontWeight: '600', color: '#111827' }}>
-                            ${t.valor_total_usd?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                            <div>
+                              <div>US$ {t.valor_total_usd?.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</div>
+                              {mostrarDualCurrency && tipoCambio && (
+                                <div style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '500', marginTop: '2px' }}>
+                                  $ {((t.valor_total_usd || 0) * tipoCambio).toLocaleString('es-AR', { minimumFractionDigits: 2 })} ARS
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td style={{ 
                             padding: '0.875rem 1rem', 

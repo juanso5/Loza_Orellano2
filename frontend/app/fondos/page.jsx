@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 
 import SidebarProvider from "../../components/SidebarProvider";
-import { MovementsProvider } from "../../components/MovementsProvider";
+import { MovementsProvider, useMovements } from "../../components/MovementsProvider";
 import ClientList from "../../components/ClientList";
 import ClientDetail from "../../components/ClientDetail";
 import MovementModal from "../../components/MovementModal";
@@ -18,7 +18,8 @@ import { toISODateTimeLocal } from "@/lib/utils/dateUtils";
 import { clamp01 } from "@/lib/utils/formatters";
 import { computeProgress, signedAmount, aggregateFundsByPortfolio } from "@/lib/fondoHelpers";
 
-const FondosPage = () => {
+const FondosPageContent = () => {
+  const { pricesMap, normalizeSimple } = useMovements();
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -165,10 +166,55 @@ const FondosPage = () => {
           console.warn("Liquidez no disponible:", e);
         }
 
+        // Enriquecer fondos con precios y rendimiento
+        const portfoliosEnriquecidos = portfoliosConLiquidez.map(p => {
+          const fundsEnriquecidos = p.funds.map(f => {
+            const fundKey = normalizeSimple(f.name);
+            const precioActualARS = pricesMap[fundKey] || 0;
+            
+            // Calcular precio promedio de compra (precio_usd de los movimientos de este fondo)
+            const movsDelFondo = movements.filter(m => 
+              m.portfolioId === p.id && 
+              normalizeSimple(m.fund) === fundKey
+            );
+            
+            let precioPromedioUSD = 0;
+            let totalCompras = 0;
+            
+            for (const mov of movsDelFondo) {
+              if (mov.type === 'compra' && mov.priceUsd && mov.priceUsd > 0) {
+                precioPromedioUSD += mov.priceUsd * mov.amount;
+                totalCompras += mov.amount;
+              }
+            }
+            
+            if (totalCompras > 0) {
+              precioPromedioUSD = precioPromedioUSD / totalCompras;
+            }
+            
+            // Calcular rendimiento: (precioActualARS - precioPromedioUSD) / precioPromedioUSD
+            const totalReturn = precioPromedioUSD > 0 
+              ? (precioActualARS - precioPromedioUSD) / precioPromedioUSD 
+              : 0;
+            
+            return {
+              ...f,
+              precioActualARS,
+              precioPromedioUSD,
+              totalReturn
+            };
+          });
+          
+          return {
+            ...p,
+            funds: fundsEnriquecidos
+          };
+        });
+
         setClients((prev) =>
           prev.map((c) =>
             c.id === selectedClientId
-              ? { ...c, portfolios: portfoliosConLiquidez, movements }
+              ? { ...c, portfolios: portfoliosEnriquecidos, movements }
               : c
           )
         );
@@ -534,8 +580,7 @@ const FondosPage = () => {
   }, [selectedClientId, refreshClientMovements]);
 
   return (
-    <MovementsProvider>
-      <SidebarProvider>
+    <SidebarProvider>
         <div className="main-content" id="main-content">
         <div className="main-inner">
           <header className="top-header">
@@ -714,7 +759,14 @@ const FondosPage = () => {
         }}
         defaultClientId={selectedClientId}
       />
-      </SidebarProvider>
+    </SidebarProvider>
+  );
+};
+
+const FondosPage = () => {
+  return (
+    <MovementsProvider>
+      <FondosPageContent />
     </MovementsProvider>
   );
 };

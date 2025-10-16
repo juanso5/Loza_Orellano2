@@ -11,7 +11,7 @@ const getSb = () => getSSRClient(); // async
 
 // SELECT con joins para nombres
 const SELECT_BASE =
-  "id_movimiento,cliente_id,fondo_id,fecha_alta,precio_usd,tipo_mov,nominal,tipo_especie_id," +
+  "id_movimiento,cliente_id,fondo_id,fecha_alta,precio_compra,moneda_compra,tipo_cambio_compra,precio_compra_usd,tipo_mov,nominal,tipo_especie_id," +
   "tipo_especie:tipo_especie_id(id_tipo_especie,nombre)," +
   "cliente:cliente_id(id_cliente,nombre)," +
   "fondo:fondo_id(id_fondo,tipo_cartera:tipo_cartera_id(id_tipo_cartera,descripcion))";
@@ -65,7 +65,13 @@ const mapRow = (r) => ({
   cliente_id: Number(r.cliente_id),
   fondo_id: Number(r.fondo_id),
   fecha_alta: typeof r.fecha_alta === "string" ? r.fecha_alta : new Date(r.fecha_alta).toISOString(),
-  precio_usd: r.precio_usd == null ? null : Number(r.precio_usd),
+  // Nuevos campos de moneda
+  precio_compra: r.precio_compra == null ? null : Number(r.precio_compra),
+  moneda_compra: r.moneda_compra || 'USD',
+  tipo_cambio_compra: r.tipo_cambio_compra == null ? null : Number(r.tipo_cambio_compra),
+  precio_compra_usd: r.precio_compra_usd == null ? null : Number(r.precio_compra_usd),
+  // Backward compatibility
+  precio_usd: r.precio_compra_usd == null ? (r.precio_compra == null ? null : Number(r.precio_compra)) : Number(r.precio_compra_usd),
   tipo_mov: r.tipo_mov,
   nominal: Number(r.nominal),
   tipo_especie_id: r.tipo_especie_id == null ? null : Number(r.tipo_especie_id),
@@ -80,9 +86,14 @@ const createSchema = z.object({
   fecha_alta: z.union([ymd, z.string().datetime().optional()]).optional(),
   tipo_mov: z.enum(["compra", "venta"]),
   nominal: z.coerce.number().int().positive(),
-  precio_usd: z.coerce.number().optional().nullable(),
+  // Precio de transacción (lo que pagaste/vendiste)
+  precio_compra: z.coerce.number().optional().nullable(),
+  moneda_compra: z.enum(["USD", "ARS", "USDC"]).optional().default("USD"),
+  tipo_cambio_compra: z.coerce.number().positive().optional().nullable(),
   tipo_especie_id: z.coerce.number().int().positive().optional(),
   especie: z.string().min(1).optional(),
+  // Backward compatibility (si viene precio_usd, lo mapeamos a precio_compra)
+  precio_usd: z.coerce.number().optional().nullable(),
 });
 
 const updateSchema = z.object({
@@ -315,19 +326,41 @@ export async function POST(req) {
       fondo_id,
       tipo_especie_id,
       fecha_alta,
-      precio_usd,
+      precio_compra,
+      precio_usd,  // Backward compatibility
+      moneda_compra,
+      tipo_cambio_compra,
       tipo_mov,
       nominal,
       especie,
     } = parsed.data;
 
+    // Determinar precio final (prioridad: precio_compra > precio_usd)
+    const precioFinal = precio_compra || precio_usd;
+    const monedaFinal = moneda_compra || 'USD';
+    const tcFinal = tipo_cambio_compra;
+
+    // Calcular precio en USD
+    let precio_compra_usd;
+    if (monedaFinal === 'USD' || monedaFinal === 'USDC') {
+      precio_compra_usd = precioFinal;
+    } else if (monedaFinal === 'ARS' && tcFinal) {
+      precio_compra_usd = precioFinal / tcFinal;
+    } else if (monedaFinal === 'ARS') {
+      return NextResponse.json({
+        error: "Si la moneda es ARS, debe proporcionar tipo_cambio_compra"
+      }, { status: 400 });
+    } else {
+      precio_compra_usd = precioFinal;
+    }
+
     // 🔥 VALIDAR LIQUIDEZ DEL FONDO PARA COMPRAS
     if (tipo_mov === "compra") {
-      // Validar que precio_usd sea válido
-      const precioNum = parseFloat(precio_usd);
-      if (!precio_usd || isNaN(precioNum) || precioNum <= 0) {
+      // Validar que precio sea válido
+      const precioNum = parseFloat(precio_compra_usd);
+      if (!precioFinal || isNaN(precioNum) || precioNum <= 0) {
         return NextResponse.json({
-          error: "Para una compra se requiere un precio_usd válido y mayor a 0"
+          error: "Para una compra se requiere un precio válido y mayor a 0"
         }, { status: 400 });
       }
 
@@ -338,7 +371,7 @@ export async function POST(req) {
         }, { status: 400 });
       }
 
-      const costoCompra = precioNum * nominalNum;
+      const costoCompra = precio_compra_usd * nominalNum;
       
       // Importar helper
       const { validarSaldoParaCompra } = await import("../../../lib/fondoHelpers");
@@ -407,7 +440,10 @@ export async function POST(req) {
       fondo_id,
       tipo_especie_id: finalTipoEspecieId,
       fecha_alta: fecha_alta || new Date().toISOString(),
-      precio_usd: precio_usd != null ? parseFloat(precio_usd) : null,
+      precio_compra: precioFinal != null ? parseFloat(precioFinal) : null,
+      moneda_compra: monedaFinal,
+      tipo_cambio_compra: tcFinal != null ? parseFloat(tcFinal) : null,
+      precio_compra_usd: precio_compra_usd != null ? parseFloat(precio_compra_usd) : null,
       tipo_mov,
       nominal: parseInt(nominal),
     };

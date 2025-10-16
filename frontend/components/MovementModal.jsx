@@ -27,7 +27,9 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
   const [especieSel, setEspecieSel] = useState('');
   const [especieNueva, setEspecieNueva] = useState('');
   const [nominal, setNominal] = useState('');
-  const [precioUsd, setPrecioUsd] = useState('');
+  const [precio, setPrecio] = useState('');
+  const [moneda, setMoneda] = useState('USD');
+  const [tipoCambio, setTipoCambio] = useState('');
 
   const [loading, setLoading] = useState(false);
   
@@ -43,7 +45,9 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
       setEspecieSel('');
       setEspecieNueva('');
       setNominal('');
-      setPrecioUsd('');
+      setPrecio('');
+      setMoneda('USD');
+      setTipoCambio('');
       setFondoId(null);
       if (defaultClientId) {
         setClienteId(defaultClientId);
@@ -222,6 +226,21 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     return avail;
   }, [tipo, fondoId, especieSel, especieNueva, availableByKey]);
 
+  // Calcular precio en USD para mostrar y validar
+  const precioEnUSD = useMemo(() => {
+    const p = parseFloat(precio);
+    if (isNaN(p) || p <= 0) return 0;
+    
+    if (moneda === 'USD' || moneda === 'USDC') {
+      return p;
+    } else if (moneda === 'ARS') {
+      const tc = parseFloat(tipoCambio);
+      if (isNaN(tc) || tc <= 0) return 0;
+      return p / tc;
+    }
+    return 0;
+  }, [precio, moneda, tipoCambio]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!clienteId || !fondoId) return;
@@ -231,16 +250,25 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
       return;
     }
     
-    // Validación: precio obligatorio para compras y ventas
-    const precio = parseFloat(precioUsd);
-    if (!precioUsd || isNaN(precio) || precio <= 0) {
-      alert(`Para ${tipo === 'Ingreso' ? 'una compra' : 'una venta'} el Precio USD es obligatorio y debe ser mayor a 0`);
+    // Validación: precio obligatorio
+    const precioNum = parseFloat(precio);
+    if (!precio || isNaN(precioNum) || precioNum <= 0) {
+      alert(`El precio es obligatorio y debe ser mayor a 0`);
       return;
+    }
+
+    // Validación: si moneda es ARS, tipo de cambio es obligatorio
+    if (moneda === 'ARS') {
+      const tcNum = parseFloat(tipoCambio);
+      if (!tipoCambio || isNaN(tcNum) || tcNum <= 0) {
+        alert('Para precios en ARS debe ingresar el Tipo de Cambio');
+        return;
+      }
     }
     
     // Advertencia si el costo supera la liquidez disponible (solo para compras)
-    if (tipo === 'Ingreso' && liquidezDisponible !== null) {
-      const costoCompra = precio * Number(nominal);
+    if (tipo === 'Ingreso' && liquidezDisponible !== null && precioEnUSD > 0) {
+      const costoCompra = precioEnUSD * Number(nominal);
       if (costoCompra > liquidezDisponible) {
         if (!confirm(`El costo de la compra ($${costoCompra.toFixed(2)} USD) supera la liquidez disponible ($${liquidezDisponible.toFixed(2)} USD). El servidor rechazará esta operación. ¿Intentar de todas formas?`)) {
           return;
@@ -251,27 +279,39 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     if (tipo === 'Egreso' && availableHint !== null && Number(nominal) > availableHint) {
       if (!confirm(`El nominal (${nominal}) supera el disponible (${availableHint}). ¿Continuar?`)) return;
     }
+    
     setLoading(true);
     try {
       const isoDate = toISODateTimeLocal(fecha);
+      
+      // Construir payload con los campos correctos de normalización
       const payload = {
         cliente_id: clienteId,
         fondo_id: fondoId,
         fecha_alta: isoDate,
         tipo_mov: tipo === 'Egreso' ? 'venta' : 'compra',
         nominal: Number(nominal),
-        precio_usd: precioUsd ? Number(precioUsd) : null,
+        precio_compra: precioNum,
+        moneda_compra: moneda,
         especie: espName,
       };
+
+      // Solo agregar tipo_cambio_compra si la moneda es ARS
+      if (moneda === 'ARS') {
+        payload.tipo_cambio_compra = parseFloat(tipoCambio);
+      }
+
       const res = await fetch('/api/movimiento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error || 'Error al crear movimiento');
       }
+      
       // Actualizar filtro y refrescar datos
       setClientIdFilter(clienteId);
       refreshFirstPage();
@@ -286,7 +326,9 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
         setEspecieSel('');
         setEspecieNueva('');
         setNominal('');
-        setPrecioUsd('');
+        setPrecio('');
+        setMoneda('USD');
+        setTipoCambio('');
         setFondoId(null);
       }, 300);
     } catch (err) {
@@ -393,33 +435,93 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
             </label>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span>Nominal</span>
-              <input type="number" value={nominal} onChange={(e) => setNominal(e.target.value)} required min="1" step="1" />
-              {availableHint !== null && (
-                <small style={{ color: Number(nominal) > availableHint ? '#b00' : '#666' }}>
-                  Disponible: {availableHint}
-                </small>
-              )}
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <span>Precio USD <span style={{ color: '#d32f2f' }}>*</span></span>
-              <input 
-                type="number" 
-                value={precioUsd} 
-                onChange={(e) => setPrecioUsd(e.target.value)} 
-                step="0.01" 
-                min="0.01" 
-                placeholder="0.00"
-                required
-              />
-              <small style={{ color: '#666' }}>
-                {tipo === 'Ingreso' 
-                  ? 'Requerido para validar liquidez' 
-                  : 'Requerido para calcular recupero'}
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span>Nominal</span>
+            <input type="number" value={nominal} onChange={(e) => setNominal(e.target.value)} required min="1" step="1" />
+            {availableHint !== null && (
+              <small style={{ color: Number(nominal) > availableHint ? '#b00' : '#666' }}>
+                Disponible: {availableHint}
               </small>
-            </label>
+            )}
+          </label>
+
+          <div style={{ 
+            padding: '16px', 
+            backgroundColor: '#f5f5f5', 
+            borderRadius: 8,
+            border: '1px solid #e0e0e0'
+          }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#424242' }}>
+              💵 Precio de la Transacción
+            </h4>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 12 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span>Precio <span style={{ color: '#d32f2f' }}>*</span></span>
+                <input 
+                  type="number" 
+                  value={precio} 
+                  onChange={(e) => setPrecio(e.target.value)} 
+                  step="0.01" 
+                  min="0.01" 
+                  placeholder="0.00"
+                  required
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <span>Moneda <span style={{ color: '#d32f2f' }}>*</span></span>
+                <select value={moneda} onChange={(e) => setMoneda(e.target.value)} required>
+                  <option value="USD">USD</option>
+                  <option value="ARS">ARS</option>
+                </select>
+              </label>
+            </div>
+
+            {moneda === 'ARS' && (
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+                <span>Tipo de Cambio (ARS/USD) <span style={{ color: '#d32f2f' }}>*</span></span>
+                <input 
+                  type="number" 
+                  value={tipoCambio} 
+                  onChange={(e) => setTipoCambio(e.target.value)} 
+                  step="0.01" 
+                  min="0.01" 
+                  placeholder="Ej: 1520.00"
+                  required
+                />
+                <small style={{ color: '#666' }}>
+                  Cuántos pesos argentinos equivalen a 1 USD
+                </small>
+              </label>
+            )}
+
+            {/* Mostrar conversión a USD */}
+            {precioEnUSD > 0 && (
+              <div style={{ 
+                padding: '8px 12px', 
+                backgroundColor: '#e3f2fd', 
+                borderRadius: 4,
+                borderLeft: '3px solid #2196f3'
+              }}>
+                <small style={{ color: '#1565c0', fontWeight: 500 }}>
+                  {moneda === 'ARS' ? (
+                    <>
+                      💱 Conversión: {precio} ARS = ${precioEnUSD.toFixed(2)} USD
+                      {nominal && (
+                        <> • Costo total: ${(precioEnUSD * Number(nominal)).toFixed(2)} USD</>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      💵 Precio unitario: ${precioEnUSD.toFixed(2)} USD
+                      {nominal && (
+                        <> • Costo total: ${(precioEnUSD * Number(nominal)).toFixed(2)} USD</>
+                      )}
+                    </>
+                  )}
+                </small>
+              </div>
+            )}
           </div>
 
           <footer className="modal-footer" style={{ marginTop: 8 }}>

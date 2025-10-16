@@ -6,6 +6,7 @@ import useDebouncedValue from './useDebouncedValue';
 import ClientsPanel from './ClientsPanel';
 import ClientsHoldingsList from './ClientsHoldingsList';
 import MovementModal from './MovementModal';
+import CSVPrecioImport from './CSVPrecioImport';
 
 function Toolbar({ onAdd, viewMode, setViewMode }) {
   const fileRef = useRef(null);
@@ -154,6 +155,7 @@ export default function CSVMovimientos() {
   const [addOpen, setAddOpen] = useState(false);
   const [prefClient, setPrefClient] = useState(null);
   const [viewMode, setViewMode] = useState('holdings'); // 'holdings' | 'movements'
+  const [showPrecioImport, setShowPrecioImport] = useState(false);
 
   const openAddFor = (clientId) => {
     setPrefClient(clientId ?? null);
@@ -164,6 +166,27 @@ export default function CSVMovimientos() {
     <MovementsProvider>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
         <Toolbar onAdd={() => openAddFor(prefClient)} viewMode={viewMode} setViewMode={setViewMode} />
+        
+        {/* Botón para abrir import de precios */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+          <button 
+            className="btn secondary"
+            onClick={() => setShowPrecioImport(!showPrecioImport)}
+            style={{ fontSize: '0.875rem' }}
+          >
+            <i className={showPrecioImport ? 'fas fa-chevron-up' : 'fas fa-chevron-down'} />
+            {' '}
+            {showPrecioImport ? 'Ocultar' : 'Importar'} Precios desde CSV (Inviu)
+          </button>
+        </div>
+
+        {/* Componente de import colapsable */}
+        {showPrecioImport && (
+          <div style={{ maxWidth: 900, margin: '0 auto', width: '100%' }}>
+            <CSVPrecioImport />
+          </div>
+        )}
+
         <MovementsContent
           onSelectClient={(id) => setPrefClient(id)}
           onAdd={(clientId) => openAddFor(clientId)}

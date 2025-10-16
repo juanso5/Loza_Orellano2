@@ -56,7 +56,7 @@ export async function GET(req, { params }) {
       resumen.ganancia_perdida_usd += Number(t.ganancia_perdida_usd || 0);
       resumen.total_especies += 1;
       
-      if (t.precio_actual !== null && t.precio_actual > 0) {
+      if (t.precio_actual_usd !== null && t.precio_actual_usd > 0) {
         resumen.especies_con_precio += 1;
       } else {
         resumen.especies_sin_precio += 1;
@@ -77,21 +77,31 @@ export async function GET(req, { params }) {
     const tenenciasFormateadas = (tenencias || []).map((t) => ({
       fondo_id: Number(t.fondo_id),
       tipo_especie_id: Number(t.tipo_especie_id),
-      especie_nombre: t.especie_nombre || "Sin nombre",
-      cantidad_actual: Number(t.cantidad_actual || 0),
-      precio_promedio_compra: t.precio_promedio_compra 
-        ? Number(t.precio_promedio_compra) 
+      especie_nombre: t.nombre_especie || "Sin nombre",
+      cantidad_actual: Number(t.tenencia_actual || 0),
+      
+      // Precios en USD (normalizados)
+      precio_promedio_compra_usd: t.precio_promedio_compra_usd 
+        ? Number(t.precio_promedio_compra_usd) 
         : null,
-      total_movimientos: Number(t.total_movimientos || 0),
-      ultima_operacion: t.ultima_operacion,
-      primera_operacion: t.primera_operacion,
-      precio_actual: t.precio_actual ? Number(t.precio_actual) : null,
-      fecha_precio: t.fecha_precio,
+      precio_actual_usd: t.precio_actual_usd 
+        ? Number(t.precio_actual_usd) 
+        : null,
+      
+      // Precio original (para referencia, puede ser ARS o USD)
+      precio_original: t.precio_original,
+      moneda_precio_actual: t.moneda_precio_actual,
+      
+      // Valores y rendimiento (en USD)
       valor_total_usd: Number(t.valor_total_usd || 0),
+      ganancia_perdida_usd: Number(t.ganancia_perdida_usd || 0),
       rendimiento_porcentaje: t.rendimiento_porcentaje 
         ? Number(t.rendimiento_porcentaje) 
         : 0,
-      ganancia_perdida_usd: Number(t.ganancia_perdida_usd || 0),
+      
+      // Metadatos
+      fecha_precio_actual: t.fecha_precio_actual,
+      dias_desde_actualizacion: t.dias_desde_actualizacion,
     }));
 
     return NextResponse.json({
