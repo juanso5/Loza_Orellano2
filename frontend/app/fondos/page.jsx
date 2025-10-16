@@ -1,7 +1,5 @@
 "use client";
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-
 import SidebarProvider from "../../components/SidebarProvider";
 import { MovementsProvider, useMovements } from "../../components/MovementsProvider";
 import ClientList from "../../components/ClientList";
@@ -12,42 +10,35 @@ import AddPortfolioModal from "../../components/AddPortfolioModal";
 import TenenciasFondoModal from "../../components/TenenciasFondoModal";
 import DetalleEspecieModal from "../../components/DetalleEspecieModal";
 import SpeciesHistoryModal from "../../components/SpeciesHistoryModal";
-
 // Utilities
 import { toISODateTimeLocal } from "@/lib/utils/dateUtils";
 import { clamp01 } from "@/lib/utils/formatters";
 import { computeProgress, signedAmount, aggregateFundsByPortfolio } from "@/lib/fondoHelpers";
-
 const FondosPageContent = () => {
   const { pricesMap, normalizeSimple } = useMovements();
   const [clients, setClients] = useState([]);
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
-
   const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState(false);
   const [isPortfolioDetailOpen, setIsPortfolioDetailOpen] = useState(false);
   const [portfolioModalContext, setPortfolioModalContext] = useState({
     clientId: null,
     portfolioId: null,
   });
-
   const [isSpeciesHistoryOpen, setIsSpeciesHistoryOpen] = useState(false);
   const [speciesHistoryContext, setSpeciesHistoryContext] = useState({
     clientId: null,
     portfolioId: null,
     fundName: null,
   });
-
   const [isDetalleEspecieOpen, setIsDetalleEspecieOpen] = useState(false);
   const [detalleEspecieContext, setDetalleEspecieContext] = useState({
     fondo: null,
     especie: null,
   });
-
   // 1) Cargar clientes
   useEffect(() => {
     (async () => {
@@ -65,15 +56,12 @@ const FondosPageContent = () => {
         setClients(enriched);
         if (enriched.length > 0) setSelectedClientId(enriched[0].id);
       } catch (e) {
-        console.error("Error cargando clientes:", e);
-      }
+        }
     })();
   }, []);
-
   // 2) Cargar carteras y movimientos del cliente seleccionado
   useEffect(() => {
     if (!selectedClientId) return;
-
     (async () => {
       try {
         // Carteras
@@ -116,7 +104,6 @@ const FondosPageContent = () => {
             },
           };
         });
-
         // Movimientos
         let movements = [];
         try {
@@ -145,11 +132,8 @@ const FondosPageContent = () => {
             };
           });
         } catch (e) {
-          console.warn("Movimientos no disponibles aún:", e);
-        }
-
+          }
         const portfoliosWithFunds = aggregateFundsByPortfolio(portfolios, movements);
-
         // Cargar liquidez por fondo
         let portfoliosConLiquidez = portfoliosWithFunds;
         try {
@@ -163,9 +147,7 @@ const FondosPageContent = () => {
             }));
           }
         } catch (e) {
-          console.warn("Liquidez no disponible:", e);
-        }
-
+          }
         // Enriquecer fondos con precios y rendimiento
         const portfoliosEnriquecidos = portfoliosConLiquidez.map(p => {
           const fundsEnriquecidos = p.funds.map(f => {
@@ -173,7 +155,6 @@ const FondosPageContent = () => {
           // pricesMap ahora contiene precios en USD normalizados
           const precioActualUSD = pricesMap[fundKey] || 0;
           const precioActualARS = precioActualUSD; // Mantenemos el alias por compatibilidad
-
           // Calc precio promedio de compra
           let precioPromedioUSD = 0;
           if (movements && f.tipo_especie_id) {
@@ -190,12 +171,10 @@ const FondosPageContent = () => {
               precioPromedioUSD = sumNominal > 0 ? sumPorPrecio / sumNominal : 0;
             }
           }
-
           // Retorno (ahora en USD)
           const currentValuation = (f.nominal || 0) * precioActualUSD;
           const costBasis = (f.nominal || 0) * precioPromedioUSD;
           const totalReturn = costBasis > 0 ? ((currentValuation - costBasis) / costBasis) * 100 : 0;
-
           return {
             ...f,
             precioActualUSD, // Precio actual en USD
@@ -204,13 +183,11 @@ const FondosPageContent = () => {
             totalReturn,
           };
           });
-          
           return {
             ...p,
             funds: fundsEnriquecidos
           };
         });
-
         setClients((prev) =>
           prev.map((c) =>
             c.id === selectedClientId
@@ -219,18 +196,14 @@ const FondosPageContent = () => {
           )
         );
       } catch (e) {
-        console.error("Error cargando datos del cliente:", e);
-      }
+        }
     })();
   }, [selectedClientId]);
-
   const selectedClient = useMemo(
     () => clients.find((c) => c.id === selectedClientId),
     [clients, selectedClientId]
   );
-
   const handleSelectClient = (id) => setSelectedClientId(id);
-
   // 3) Crear cartera
   const handleAddPortfolio = useCallback(
     async (newPortfolio) => {
@@ -241,26 +214,19 @@ const FondosPageContent = () => {
           ...newPortfolio,
           cliente_id: selectedClientId, // Asegurar que tenga el cliente correcto
         };
-
-        console.log('handleAddPortfolio - Enviando payload:', payload);
-
         const res = await fetch("/api/fondo", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        
         if (!res.ok) {
           const error = await res.text();
-          console.error("Error creando cartera:", error);
           throw new Error(error);
         }
-        
         const result = await res.json();
         if (!result.success) {
           throw new Error(result.error || 'Error desconocido');
         }
-
         // Refrescar carteras y movimientos; y recomputar fondos + progreso
         const rf = await fetch(`/api/fondo?cliente_id=${selectedClientId}`, {
           cache: "no-store",
@@ -295,7 +261,6 @@ const FondosPageContent = () => {
             },
           };
         });
-
         // Cargar movimientos y recomputar fondos
         let movements = [];
         try {
@@ -318,23 +283,19 @@ const FondosPageContent = () => {
             priceUsd: m.precio_usd == null ? null : Number(m.precio_usd),
           }));
         } catch {}
-
         const withFunds = aggregateFundsByPortfolio(base, movements);
-
         setClients((prev) =>
           prev.map((c) =>
             c.id === selectedClientId ? { ...c, portfolios: withFunds, movements } : c
           )
         );
       } catch (e) {
-        console.error("handleAddPortfolio error:", e);
-      } finally {
+        } finally {
         setIsAddPortfolioOpen(false);
       }
     },
     [selectedClientId]
   );
-
   // 4) Editar cartera
   const handleSavePortfolioEdits = useCallback(
     async (updatedPortfolio) => {
@@ -352,7 +313,6 @@ const FondosPageContent = () => {
               updatedPortfolio?.periodMonths != null ? "meses" : null,
           }),
         });
-
         // Refrescar carteras
         const rf = await fetch(
           `/api/fondo?cliente_id=${portfolioModalContext.clientId}`,
@@ -393,25 +353,21 @@ const FondosPageContent = () => {
             },
           };
         });
-
         // Re-attach funds con movimientos actuales del cliente
         const current = clients.find((c) => c.id === selectedClientId);
         const withFunds = aggregateFundsByPortfolio(portfolios, current?.movements || []);
-
         setClients((prev) =>
           prev.map((c) =>
             c.id === selectedClientId ? { ...c, portfolios: withFunds } : c
           )
         );
       } catch (e) {
-        console.error("handleSavePortfolioEdits error:", e);
-      } finally {
+        } finally {
         setIsPortfolioDetailOpen(false);
       }
     },
     [portfolioModalContext, clients, selectedClientId]
   );
-
   // 4b) Eliminar cartera
   const handleDeletePortfolio = useCallback(
     async (clientId, portfolioId) => {
@@ -424,8 +380,7 @@ const FondosPageContent = () => {
         });
         if (!res.ok) {
           const te = await res.text();
-          console.error("Error eliminando cartera:", te);
-        }
+          }
         // Refrescar carteras y movimientos del cliente
         const rf = await fetch(`/api/fondo?cliente_id=${clientId}`, {
           cache: "no-store",
@@ -465,7 +420,6 @@ const FondosPageContent = () => {
             },
           };
         });
-
         // refrescar movimientos
         let movements = [];
         try {
@@ -487,15 +441,12 @@ const FondosPageContent = () => {
             priceUsd: m.precio_usd == null ? null : Number(m.precio_usd),
           }));
         } catch {}
-
         const withFunds = aggregateFundsByPortfolio(portfolios, movements);
-
         setClients((prev) =>
           prev.map((c) =>
             c.id === clientId ? { ...c, portfolios: withFunds, movements } : c
           )
         );
-
         // Cerrar modal de detalle si estaba abierto sobre esta cartera
         if (
           isPortfolioDetailOpen &&
@@ -504,12 +455,10 @@ const FondosPageContent = () => {
           setIsPortfolioDetailOpen(false);
         }
       } catch (e) {
-        console.error("handleDeletePortfolio error:", e);
-      }
+        }
     },
     [isPortfolioDetailOpen, portfolioModalContext]
   );
-
   // Helpers para refrescar movimientos tras guardar/borrar
   const refreshClientMovements = useCallback(
     async (clientId) => {
@@ -531,7 +480,6 @@ const FondosPageContent = () => {
           amount: Number(m.nominal) || 0,
           priceUsd: m.precio_usd == null ? null : Number(m.precio_usd),
         }));
-
         // Recomputar fondos de las carteras del cliente
         setClients((prev) =>
           prev.map((c) => {
@@ -541,12 +489,10 @@ const FondosPageContent = () => {
           })
         );
       } catch (e) {
-        console.error("refreshClientMovements error:", e);
-      }
+        }
     },
     [setClients]
   );
-
   // 6) Eliminar movimiento
   const handleConfirmDelete = useCallback(async () => {
     if (!pendingDeleteId || !selectedClientId) return;
@@ -556,29 +502,23 @@ const FondosPageContent = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: pendingDeleteId }),
       });
-      if (!res.ok) console.error("No se pudo borrar el movimiento");
-
-      await refreshClientMovements(selectedClientId);
+      if (!res.ok) await refreshClientMovements(selectedClientId);
     } catch (e) {
-      console.error("handleConfirmDelete error:", e);
-    } finally {
+      } finally {
       setIsConfirmDeleteOpen(false);
       setPendingDeleteId(null);
     }
   }, [pendingDeleteId, selectedClientId, refreshClientMovements]);
-
   const formatNumber = (n) =>
     Number(n || 0).toLocaleString("es-AR", {
       maximumFractionDigits: 2,
     });
-
   // Handler para refrescar movimientos después de guardar
   const handleMovementSaved = useCallback(() => {
     if (selectedClientId) {
       refreshClientMovements(selectedClientId);
     }
   }, [selectedClientId, refreshClientMovements]);
-
   return (
     <SidebarProvider>
         <div className="main-content" id="main-content">
@@ -603,7 +543,6 @@ const FondosPageContent = () => {
               </div>
             </div>
           </header>
-
           <div className="fondos-layout">
             <aside className="clients-column card">
               <div className="card-header">
@@ -628,7 +567,6 @@ const FondosPageContent = () => {
                 onSelectClient={setSelectedClientId}
               />
             </aside>
-
             <section className="client-detail card">
               {selectedClient ? (
                 <ClientDetail
@@ -674,7 +612,6 @@ const FondosPageContent = () => {
           </div>
         </div>
       </div>
-
       {isConfirmDeleteOpen &&
         (() => {
           const movement = selectedClient?.movements.find(
@@ -694,7 +631,6 @@ const FondosPageContent = () => {
             />
           );
         })()}
-
       {isAddPortfolioOpen && (
         <AddPortfolioModal
           onClose={() => setIsAddPortfolioOpen(false)}
@@ -702,12 +638,9 @@ const FondosPageContent = () => {
           clienteId={selectedClientId}
         />
       )}
-
       {isPortfolioDetailOpen && (() => {
-        console.log('🔵 ABRIENDO MODAL DE TENENCIAS', portfolioModalContext);
         const client = clients.find(c => c.id === portfolioModalContext.clientId);
         const portfolio = client?.portfolios?.find(p => p.id === portfolioModalContext.portfolioId);
-        console.log('🔵 Portfolio encontrado:', portfolio);
         const fondo = {
           id_fondo: portfolio?.id,
           nombre: portfolio?.name,
@@ -718,8 +651,6 @@ const FondosPageContent = () => {
             icono: 'fas fa-chart-line'
           }
         };
-        console.log('🔵 Fondo construido:', fondo);
-        
         return (
           <TenenciasFondoModal
             fondo={fondo}
@@ -734,7 +665,6 @@ const FondosPageContent = () => {
           />
         );
       })()}
-
       {isDetalleEspecieOpen && (
         <DetalleEspecieModal
           fondo={detalleEspecieContext.fondo}
@@ -742,7 +672,6 @@ const FondosPageContent = () => {
           onClose={() => setIsDetalleEspecieOpen(false)}
         />
       )}
-
       {isSpeciesHistoryOpen && (
         <SpeciesHistoryModal
           clients={clients}
@@ -750,7 +679,6 @@ const FondosPageContent = () => {
           onClose={() => setIsSpeciesHistoryOpen(false)}
         />
       )}
-
       <MovementModal
         open={isMovementModalOpen}
         onClose={() => {
@@ -762,7 +690,6 @@ const FondosPageContent = () => {
     </SidebarProvider>
   );
 };
-
 const FondosPage = () => {
   return (
     <MovementsProvider>
@@ -770,5 +697,4 @@ const FondosPage = () => {
     </MovementsProvider>
   );
 };
-
 export default FondosPage;

@@ -1,7 +1,5 @@
 ﻿"use client";
-
 import { useState, useEffect } from 'react';
-
 export default function MovimientoModal({ 
   isOpen, 
   onClose, 
@@ -16,10 +14,8 @@ export default function MovimientoModal({
     fecha: new Date().toISOString().split('T')[0],
     comentario: ''
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
   // Cargar tipo de cambio actual desde la base de datos cuando se abre el modal
   useEffect(() => {
     if (isOpen && !formData.tipo_cambio_usado) {
@@ -34,15 +30,12 @@ export default function MovimientoModal({
           }
         })
         .catch((err) => {
-          console.log("No se pudo cargar el tipo de cambio actual");
-        });
+          });
     }
   }, [isOpen]);
-
   const calcularEquivalencia = () => {
     const monto = parseFloat(formData.monto) || 0;
     const tc = parseFloat(formData.tipo_cambio_usado) || 1;
-
     if (formData.moneda === 'USD') {
       return {
         principal: `USD ${monto.toFixed(2)}`,
@@ -55,12 +48,10 @@ export default function MovimientoModal({
       };
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       // Preparar datos para enviar
       const payload = {
@@ -71,20 +62,16 @@ export default function MovimientoModal({
         fecha: formData.fecha,
         comentario: formData.comentario || undefined
       };
-
       // Siempre incluir tipo_cambio_usado
       if (formData.tipo_cambio_usado) {
         payload.tipo_cambio_usado = parseFloat(formData.tipo_cambio_usado);
       }
-
       const response = await fetch('/api/liquidez', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
       const result = await response.json();
-
       if (!result.success) {
         // Manejar errores de validación Zod
         if (typeof result.error === 'object' && result.error.fieldErrors) {
@@ -95,7 +82,6 @@ export default function MovimientoModal({
         }
         throw new Error(result.error || 'Error al registrar movimiento');
       }
-
       // Actualizar el tipo de cambio actual en la base de datos
       if (payload.tipo_cambio_usado) {
         fetch('/api/tipo-cambio-actual', {
@@ -105,12 +91,10 @@ export default function MovimientoModal({
             valor: payload.tipo_cambio_usado,
             comentario: `Actualizado desde ${tipo === 'deposito' ? 'depósito' : 'extracción'}`
           })
-        }).catch(err => console.error('Error actualizando tipo de cambio:', err));
+        }).catch(err => {/* Error al actualizar tipo cambio */});
       }
-
       onSave(result.data);
       onClose();
-      
       // Reset form - mantiene el tipo de cambio usado
       setFormData(prev => ({
         monto: '',
@@ -125,11 +109,8 @@ export default function MovimientoModal({
       setLoading(false);
     }
   };
-
   if (!isOpen) return null;
-
   const equivalencia = calcularEquivalencia();
-
   return (
     <div style={{
       position: 'fixed',
@@ -180,7 +161,6 @@ export default function MovimientoModal({
             <i className="fas fa-times" style={{ fontSize: '20px' }} />
           </button>
         </div>
-
         {/* Body */}
         <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
           {error && (
@@ -195,7 +175,6 @@ export default function MovimientoModal({
               {error}
             </div>
           )}
-
           {/* Monto */}
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
@@ -224,7 +203,6 @@ export default function MovimientoModal({
               placeholder="0.00"
             />
           </div>
-
           {/* Moneda */}
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
@@ -269,7 +247,6 @@ export default function MovimientoModal({
               </button>
             </div>
           </div>
-
           {/* Tipo de Cambio - SIEMPRE visible */}
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
@@ -300,7 +277,6 @@ export default function MovimientoModal({
               Ingresa el tipo de cambio del día
             </p>
           </div>
-
           {/* Equivalencia */}
           {formData.monto && (
             <div style={{
@@ -320,7 +296,6 @@ export default function MovimientoModal({
               </p>
             </div>
           )}
-
           {/* Fecha */}
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
@@ -346,7 +321,6 @@ export default function MovimientoModal({
               }}
             />
           </div>
-
           {/* Comentario */}
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
@@ -374,7 +348,6 @@ export default function MovimientoModal({
               placeholder="Ej: Transferencia inicial, Retiro parcial, etc."
             />
           </div>
-
           {/* Buttons */}
           <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem' }}>
             <button

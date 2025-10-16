@@ -2,10 +2,8 @@
  * Logger utility - Production-safe logging
  * Reemplaza console.log con logging condicional basado en ambiente
  */
-
 const isDevelopment = process.env.NODE_ENV === 'development';
 const isTest = process.env.NODE_ENV === 'test';
-
 /**
  * Niveles de log
  */
@@ -15,7 +13,6 @@ export const LOG_LEVELS = {
   WARN: 'warn',
   ERROR: 'error',
 };
-
 /**
  * Formatea el mensaje con timestamp y contexto
  */
@@ -31,7 +28,6 @@ function formatMessage(level, context, message, data) {
     formatted: `${timestamp} ${level.toUpperCase()} ${contextStr} ${message}`,
   };
 }
-
 /**
  * Logger class
  */
@@ -39,48 +35,38 @@ class Logger {
   constructor(context = '') {
     this.context = context;
   }
-
   /**
    * Log de debug - solo en desarrollo
    */
   debug(message, data) {
     if (isDevelopment) {
       const formatted = formatMessage(LOG_LEVELS.DEBUG, this.context, message, data);
-      console.log(formatted.formatted, data || '');
-    }
+      }
   }
-
   /**
    * Log de info - solo en desarrollo
    */
   info(message, data) {
     if (isDevelopment) {
       const formatted = formatMessage(LOG_LEVELS.INFO, this.context, message, data);
-      console.info(formatted.formatted, data || '');
-    }
+      }
   }
-
   /**
    * Log de warning - siempre
    */
   warn(message, data) {
     const formatted = formatMessage(LOG_LEVELS.WARN, this.context, message, data);
-    console.warn(formatted.formatted, data || '');
-  }
-
+    }
   /**
    * Log de error - siempre
    */
   error(message, error) {
     const formatted = formatMessage(LOG_LEVELS.ERROR, this.context, message, error);
-    console.error(formatted.formatted, error || '');
-    
     // En producción, aquí podrías enviar a servicio de logging
     // if (!isDevelopment) {
     //   sendToLoggingService(formatted);
     // }
   }
-
   /**
    * Grupo de logs (para agrupar logs relacionados)
    */
@@ -91,7 +77,6 @@ class Logger {
       console.groupEnd();
     }
   }
-
   /**
    * Tiempo de ejecución
    */
@@ -100,13 +85,11 @@ class Logger {
       console.time(label);
     }
   }
-
   timeEnd(label) {
     if (isDevelopment) {
       console.timeEnd(label);
     }
   }
-
   /**
    * Tabla (útil para arrays de objetos)
    */
@@ -116,12 +99,10 @@ class Logger {
     }
   }
 }
-
 /**
  * Logger por defecto (sin contexto)
  */
 export const logger = new Logger();
-
 /**
  * Crear logger con contexto específico
  * @param {string} context - Contexto del logger (ej: 'AppDataProvider', 'API')
@@ -134,7 +115,6 @@ export const logger = new Logger();
 export function createLogger(context) {
   return new Logger(context);
 }
-
 /**
  * Exports individuales para compatibilidad
  */
@@ -148,5 +128,4 @@ export const log = {
   timeEnd: (label) => logger.timeEnd(label),
   table: (data) => logger.table(data),
 };
-
 export default logger;

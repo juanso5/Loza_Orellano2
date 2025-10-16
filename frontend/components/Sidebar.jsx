@@ -1,21 +1,17 @@
 // components/Sidebar.jsx
 'use client';
-
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 // Using global sidebar.css styles (legacy like)
-
 export default function Sidebar({ collapsed: collapsedProp, toggleSidebar: toggleProp }) {
   const pathname = usePathname();
   const router = useRouter();
   const [internalCollapsed, setInternalCollapsed] = useState(false);
   const collapsedControlled = typeof collapsedProp !== 'undefined';
   const collapsed = collapsedControlled ? collapsedProp : internalCollapsed;
-
-
   useEffect(() => {
     // initialize collapsed from localStorage if not controlled by props
     if (!collapsedControlled) {
@@ -27,12 +23,10 @@ export default function Sidebar({ collapsed: collapsedProp, toggleSidebar: toggl
       }
     }
   }, [collapsedControlled]);
-
   useEffect(() => {
     // if props change, leave to parent (handled by collapsedControlled)
     // nothing to do here
   }, [collapsedProp]);
-
   const toggle = () => {
     if (toggleProp) return toggleProp();
     setInternalCollapsed((prev) => {
@@ -41,14 +35,11 @@ export default function Sidebar({ collapsed: collapsedProp, toggleSidebar: toggl
       return next;
     });
   };
-
   const isActive = (path) => {
     if (!pathname) return false;
     return pathname === path || pathname.startsWith(path + '/');
   };
-
   // (Submenús eliminados; ya no se requiere estado de submenús)
-
   return (
     <div id="sidebar" className={`sidebar ${collapsed ? 'collapsed' : ''}`}>      
       <button id="sidebar-toggle" className="sidebar-toggle" onClick={toggle} aria-expanded={!collapsed} aria-label="Alternar sidebar">

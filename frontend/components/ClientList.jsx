@@ -1,6 +1,5 @@
 // components/ClientList.jsx
 import React from 'react';
-
 const ClientList = ({ clients, searchQuery, selectedClientId, onSelectClient }) => {
   const filteredClients = clients.filter((c) => {
     if (!searchQuery) return true;
@@ -16,15 +15,12 @@ const ClientList = ({ clients, searchQuery, selectedClientId, onSelectClient }) 
     }
     return false;
   });
-
   const initials = (name = '') => name.split(' ').map((p) => p[0] || '').slice(0, 2).join('').toUpperCase();
-
   return (
     <div id="clients-list" className="clients-list card-body" aria-live="polite">
       {filteredClients.map((c) => {
         const portfoliosCount = Array.isArray(c.portfolios) ? c.portfolios.length : 0;
         const movementsCount = Array.isArray(c.movements) ? c.movements.length : 0;
-        
         return (
           <div
             key={c.id}
@@ -43,5 +39,4 @@ const ClientList = ({ clients, searchQuery, selectedClientId, onSelectClient }) 
     </div>
   );
 };
-
 export default ClientList;

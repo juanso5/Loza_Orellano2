@@ -1,20 +1,16 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { useMovements } from './MovementsProvider';
-
 function toISODateTimeLocal(val) {
   if (!val) return null;
   const d = new Date(val);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
-
 export default function MovementModal({ open, onClose, defaultClientId }) {
   const { refreshFirstPage, setClientIdFilter } = useMovements();
-
   // Datos para selects
   const [clients, setClients] = useState([]);
   const [funds, setFunds] = useState([]);
-
   // Estado del formulario
   const [clienteId, setClienteId] = useState(null);
   const [fondoId, setFondoId] = useState(null);
@@ -30,13 +26,10 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
   const [precio, setPrecio] = useState('');
   const [moneda, setMoneda] = useState('USD');
   const [tipoCambio, setTipoCambio] = useState('');
-
   const [loading, setLoading] = useState(false);
-  
   // 💰 Estado de liquidez del fondo seleccionado
   const [liquidezDisponible, setLiquidezDisponible] = useState(null);
   const [loadingLiquidez, setLoadingLiquidez] = useState(false);
-
   // Resetear formulario cuando se abre
   useEffect(() => {
     if (open) {
@@ -54,7 +47,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
       }
     }
   }, [open, defaultClientId]);
-
   // Cargar clientes al abrir
   useEffect(() => {
     if (!open) return;
@@ -83,7 +75,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     })();
     return () => { ignore = true; };
   }, [open, defaultClientId]);
-
   // Cargar carteras del cliente
   useEffect(() => {
     if (!open || !clienteId) {
@@ -110,13 +101,11 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
           } else {
             name = `Cartera ${f.id ?? f.id_fondo ?? ''}`;
           }
-          
           return {
             id: f.id ?? f.id_fondo ?? 0,
             name: name,
           };
         }).filter((f) => f.id);
-        
         if (!ignore) {
           setFunds(norm);
           if (norm.length > 0 && !fondoId) setFondoId(norm[0].id);
@@ -130,7 +119,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     })();
     return () => { ignore = true; };
   }, [open, clienteId]);
-
   // 💰 Cargar liquidez disponible del fondo seleccionado
   useEffect(() => {
     if (!open || !clienteId || !fondoId) {
@@ -145,11 +133,9 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
         if (!res.ok) throw new Error();
         const j = await res.json();
         const estado = j?.data || {};
-        
         // Buscar el fondo específico en el array 'fondos'
         const fondosArray = Array.isArray(estado.fondos) ? estado.fondos : [];
         const fondoInfo = fondosArray.find(f => Number(f.id_fondo) === Number(fondoId));
-        
         if (!ignore) {
           if (fondoInfo) {
             // El campo es 'saldoDisponible' (camelCase)
@@ -160,7 +146,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
           setLoadingLiquidez(false);
         }
       } catch (err) {
-        console.error('Error cargando liquidez del fondo:', err);
         if (!ignore) {
           setLiquidezDisponible(null);
           setLoadingLiquidez(false);
@@ -169,7 +154,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     })();
     return () => { ignore = true; };
   }, [open, clienteId, fondoId]);
-
   // Movimientos del cliente para calcular disponibles por cartera/especie
   const [availableByKey, setAvailableByKey] = useState(new Map());
   useEffect(() => {
@@ -201,7 +185,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     })();
     return () => { ignore = true; };
   }, [open, clienteId]);
-
   // Opciones de especie para la cartera seleccionada
   const speciesOptions = useMemo(() => {
     if (!fondoId) return [];
@@ -215,7 +198,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     }
     return Array.from(set).sort();
   }, [availableByKey, fondoId]);
-
   // Hint de disponibles para Egreso
   const availableHint = useMemo(() => {
     if (tipo !== 'Egreso' || !fondoId) return null;
@@ -225,12 +207,10 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     const avail = availableByKey.get(key) || 0;
     return avail;
   }, [tipo, fondoId, especieSel, especieNueva, availableByKey]);
-
   // Calcular precio en USD para mostrar y validar
   const precioEnUSD = useMemo(() => {
     const p = parseFloat(precio);
     if (isNaN(p) || p <= 0) return 0;
-    
     if (moneda === 'USD' || moneda === 'USDC') {
       return p;
     } else if (moneda === 'ARS') {
@@ -240,7 +220,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
     }
     return 0;
   }, [precio, moneda, tipoCambio]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!clienteId || !fondoId) return;
@@ -249,14 +228,12 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
       alert('Debe seleccionar o ingresar una especie');
       return;
     }
-    
     // Validación: precio obligatorio
     const precioNum = parseFloat(precio);
     if (!precio || isNaN(precioNum) || precioNum <= 0) {
       alert(`El precio es obligatorio y debe ser mayor a 0`);
       return;
     }
-
     // Validación: si moneda es ARS, tipo de cambio es obligatorio
     if (moneda === 'ARS') {
       const tcNum = parseFloat(tipoCambio);
@@ -265,7 +242,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
         return;
       }
     }
-    
     // Advertencia si el costo supera la liquidez disponible (solo para compras)
     if (tipo === 'Ingreso' && liquidezDisponible !== null && precioEnUSD > 0) {
       const costoCompra = precioEnUSD * Number(nominal);
@@ -275,15 +251,12 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
         }
       }
     }
-    
     if (tipo === 'Egreso' && availableHint !== null && Number(nominal) > availableHint) {
       if (!confirm(`El nominal (${nominal}) supera el disponible (${availableHint}). ¿Continuar?`)) return;
     }
-    
     setLoading(true);
     try {
       const isoDate = toISODateTimeLocal(fecha);
-      
       // Construir payload con los campos correctos de normalización
       const payload = {
         cliente_id: clienteId,
@@ -295,30 +268,24 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
         moneda_compra: moneda,
         especie: espName,
       };
-
       // Solo agregar tipo_cambio_compra si la moneda es ARS
       if (moneda === 'ARS') {
         payload.tipo_cambio_compra = parseFloat(tipoCambio);
       }
-
       const res = await fetch('/api/movimiento', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error || 'Error al crear movimiento');
       }
-      
       // Actualizar filtro y refrescar datos
       setClientIdFilter(clienteId);
       refreshFirstPage();
-      
       // Cerrar modal
       onClose();
-      
       // Resetear formulario después de un pequeño delay
       setTimeout(() => {
         setFecha(getDefaultFecha());
@@ -337,9 +304,7 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
       setLoading(false);
     }
   };
-
   if (!open) return null;
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600, width: '90%' }}>
@@ -368,7 +333,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               </select>
             </label>
           </div>
-
           {/* 💰 Mostrar liquidez disponible */}
           {fondoId && (
             <div style={{ 
@@ -402,7 +366,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               )}
             </div>
           )}
-
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span>Tipo</span>
@@ -416,7 +379,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               <input type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
             </label>
           </div>
-
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span>Especie</span>
             <select value={especieSel} onChange={(e) => setEspecieSel(e.target.value)} required>
@@ -427,14 +389,12 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               <option value="__NUEVA__">+ Nueva especie</option>
             </select>
           </label>
-
           {especieSel === '__NUEVA__' && (
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span>Nombre nueva especie</span>
               <input type="text" value={especieNueva} onChange={(e) => setEspecieNueva(e.target.value)} required placeholder="Ej: AAPL" />
             </label>
           )}
-
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span>Nominal</span>
             <input type="number" value={nominal} onChange={(e) => setNominal(e.target.value)} required min="1" step="1" />
@@ -444,7 +404,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               </small>
             )}
           </label>
-
           <div style={{ 
             padding: '16px', 
             backgroundColor: '#f5f5f5', 
@@ -454,7 +413,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
             <h4 style={{ margin: '0 0 12px 0', fontSize: 14, fontWeight: 600, color: '#424242' }}>
               💵 Precio de la Transacción
             </h4>
-            
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 12 }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Precio <span style={{ color: '#d32f2f' }}>*</span></span>
@@ -476,7 +434,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
                 </select>
               </label>
             </div>
-
             {moneda === 'ARS' && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
                 <span>Tipo de Cambio (ARS/USD) <span style={{ color: '#d32f2f' }}>*</span></span>
@@ -494,7 +451,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
                 </small>
               </label>
             )}
-
             {/* Mostrar conversión a USD */}
             {precioEnUSD > 0 && (
               <div style={{ 
@@ -523,7 +479,6 @@ export default function MovementModal({ open, onClose, defaultClientId }) {
               </div>
             )}
           </div>
-
           <footer className="modal-footer" style={{ marginTop: 8 }}>
             <button type="button" className="btn secondary" onClick={onClose} disabled={loading}>Cancelar</button>
             <button type="submit" className="btn primary" disabled={loading}>{loading ? 'Guardando...' : 'Guardar'}</button>

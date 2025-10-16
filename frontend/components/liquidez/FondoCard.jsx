@@ -1,5 +1,4 @@
 ﻿"use client";
-
 export default function FondoCard({ fondo, onAsignar }) {
   const { 
     id_fondo, 
@@ -11,13 +10,11 @@ export default function FondoCard({ fondo, onAsignar }) {
     rendimiento_porcentaje,
     nombre
   } = fondo;
-
   const color = tipo_cartera?.color || '#8b5cf6';
   const nombreFondo = nombre || tipo_cartera?.descripcion || 'Sin nombre';
   const icono = tipo_cartera?.icono || 'fas fa-chart-line';
   const progreso = progreso_porcentaje || 0;
   const rendimiento = rendimiento_porcentaje || 0;
-
   // Color dinámico para progreso
   const getProgressColor = () => {
     if (progreso >= 90) return '#10b981'; // Verde
@@ -26,9 +23,7 @@ export default function FondoCard({ fondo, onAsignar }) {
     if (progreso >= 30) return '#f97316'; // Naranja
     return '#3b82f6'; // Azul
   };
-
   const progressColor = getProgressColor();
-
   return (
     <div style={{
       backgroundColor: '#fff',
@@ -61,7 +56,6 @@ export default function FondoCard({ fondo, onAsignar }) {
         background: `radial-gradient(circle, ${color}15 0%, transparent 70%)`,
         borderRadius: '50%'
       }}></div>
-
       {/* Header con ícono y nombre */}
       <div style={{ 
         display: 'flex', 
@@ -111,7 +105,6 @@ export default function FondoCard({ fondo, onAsignar }) {
           </div>
         </div>
       </div>
-
       {/* Métrica Hero - Valor Total */}
       <div style={{
         background: `linear-gradient(135deg, ${color}12 0%, ${color}25 100%)`,
@@ -155,7 +148,6 @@ export default function FondoCard({ fondo, onAsignar }) {
           </div>
         </div>
       </div>
-
       {/* Grid de estadísticas */}
       <div style={{ 
         display: 'grid', 
@@ -192,7 +184,6 @@ export default function FondoCard({ fondo, onAsignar }) {
           </div>
         </div>
       </div>
-
       {/* Barra de progreso */}
       <div style={{ marginBottom: '1.25rem', position: 'relative', zIndex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -241,7 +232,6 @@ export default function FondoCard({ fondo, onAsignar }) {
           </div>
         )}
       </div>
-
       {/* Botón de acción - Asignar Liquidez */}
       <div style={{
         position: 'relative',

@@ -1,7 +1,5 @@
 "use client";
-
 import { useState, useEffect } from "react";
-
 export default function AsignacionModal({
   isOpen,
   onClose,
@@ -21,7 +19,6 @@ export default function AsignacionModal({
     tipo_operacion: "asignacion",
     comentario: "",
   });
-
   useEffect(() => {
     if (isOpen && clienteId) {
       // Cargar liquidez disponible
@@ -33,9 +30,7 @@ export default function AsignacionModal({
           }
         })
         .catch((err) => {
-          console.error("Error cargando liquidez:", err);
-        });
-      
+          });
       // Cargar el tipo de cambio actual desde la base de datos
       fetch('/api/tipo-cambio-actual')
         .then(r => r.json())
@@ -50,19 +45,16 @@ export default function AsignacionModal({
           }
         })
         .catch((err) => {
-          console.error("Error cargando tipo de cambio actual:", err);
           setTipoCambioActual(null);
           setFormData(prev => ({ ...prev, tipo_cambio_usado: "" }));
         });
     }
   }, [isOpen, clienteId]);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
     setLoading(true);
-
     try {
       const payload = {
         cliente_id: clienteId,
@@ -73,19 +65,15 @@ export default function AsignacionModal({
         tipo_operacion: formData.tipo_operacion,
         comentario: formData.comentario,
       };
-
       const resp = await fetch("/api/liquidez/asignar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const data = await resp.json();
-
       if (!resp.ok || !data.success) {
         throw new Error(data.error || "Error al procesar la asignación");
       }
-
       // Actualizar el tipo de cambio actual en la base de datos
       if (payload.tipo_cambio_usado) {
         fetch('/api/tipo-cambio-actual', {
@@ -95,9 +83,8 @@ export default function AsignacionModal({
             valor: payload.tipo_cambio_usado,
             comentario: `Actualizado desde asignación a fondo #${fondo.id_fondo}`
           })
-        }).catch(err => console.error('Error actualizando tipo de cambio:', err));
+        }).catch(err => {/* Error al actualizar tipo cambio */});
       }
-
       setSuccess("Operación realizada correctamente");
       setTimeout(() => {
         onSave();
@@ -117,29 +104,23 @@ export default function AsignacionModal({
       setLoading(false);
     }
   };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
   if (!isOpen) return null;
-
   // Calcular montos
   const monto = parseFloat(formData.monto) || 0;
   const tc = parseFloat(formData.tipo_cambio_usado) || 1;
   const montoUSD = formData.moneda === "ARS" ? monto / tc : monto;
-  
   const excedeDisponible =
     formData.tipo_operacion === "asignacion" &&
     liquidezDisponible !== null &&
     montoUSD > liquidezDisponible;
-
   // Datos del fondo
   const nombreFondo = fondo?.nombre || fondo?.tipo_cartera?.descripcion || `Fondo #${fondo?.id_fondo}`;
   const color = fondo?.tipo_cartera?.color || '#3b82f6';
   const esAsignacion = formData.tipo_operacion === "asignacion";
-
   return (
     <div
       style={{
@@ -208,7 +189,6 @@ export default function AsignacionModal({
               ×
             </button>
           </div>
-          
           {/* Info del fondo */}
           <div style={{
             marginTop: "1rem",
@@ -225,7 +205,6 @@ export default function AsignacionModal({
             </div>
           </div>
         </div>
-
         {/* Body del formulario */}
         <form onSubmit={handleSubmit} style={{ padding: "1.5rem" }}>
           {/* Liquidez disponible del cliente (para asignación) */}
@@ -256,7 +235,6 @@ export default function AsignacionModal({
               </div>
             </div>
           )}
-
           {/* Liquidez asignada al fondo (para desasignación) */}
           {!esAsignacion && fondo?.liquidez_asignada !== undefined && (
             <div style={{
@@ -279,7 +257,6 @@ export default function AsignacionModal({
               </div>
             </div>
           )}
-
           {/* Tipo de operación */}
           <div style={{ marginBottom: "1.25rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
@@ -322,7 +299,6 @@ export default function AsignacionModal({
               </button>
             </div>
           </div>
-
           {/* Moneda */}
           <div style={{ marginBottom: "1.25rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
@@ -351,7 +327,6 @@ export default function AsignacionModal({
               ))}
             </div>
           </div>
-
           {/* Monto */}
           <div style={{ marginBottom: "1.25rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
@@ -390,7 +365,6 @@ export default function AsignacionModal({
               </div>
             )}
           </div>
-
           {/* Tipo de Cambio - SIEMPRE visible */}
           <div style={{ marginBottom: "1.25rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
@@ -424,7 +398,6 @@ export default function AsignacionModal({
               </div>
             )}
           </div>
-
           {/* Equivalencia */}
           {monto > 0 && (
             <div style={{
@@ -446,7 +419,6 @@ export default function AsignacionModal({
               </div>
             </div>
           )}
-
           {/* Comentario */}
           <div style={{ marginBottom: "1.25rem" }}>
             <label style={{ display: "block", fontWeight: "600", marginBottom: "8px", fontSize: "0.875rem", color: "#374151" }}>
@@ -470,7 +442,6 @@ export default function AsignacionModal({
               placeholder="Ej: Asignación inicial, Rebalanceo..."
             />
           </div>
-
           {/* Mensajes */}
           {error && (
             <div style={{
@@ -485,7 +456,6 @@ export default function AsignacionModal({
               ⚠ {error}
             </div>
           )}
-
           {success && (
             <div style={{
               background: "#d1fae5",
@@ -499,7 +469,6 @@ export default function AsignacionModal({
               ✓ {success}
             </div>
           )}
-
           {/* Botones */}
           <div style={{ display: "flex", gap: "10px" }}>
             <button

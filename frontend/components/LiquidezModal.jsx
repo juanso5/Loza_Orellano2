@@ -1,14 +1,11 @@
 ﻿// components/LiquidezModal.jsx
 'use client';
-
 import { useState, useEffect } from 'react';
-
 export default function LiquidezModal({ open, onClose, onSave, editingMovement = null }) {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [exchangeRate, setExchangeRate] = useState(null);
   const [saldoDisponible, setSaldoDisponible] = useState(null); // Saldo disponible del cliente
-  
   // Datos del formulario
   const [clienteId, setClienteId] = useState('');
   const [fecha, setFecha] = useState('');
@@ -17,7 +14,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
   const [monto, setMonto] = useState('');
   const [comentario, setComentario] = useState('');
   const [tipoCambioManual, setTipoCambioManual] = useState(''); // Tipo de cambio manual
-
   // Inicializar fecha actual
   useEffect(() => {
     if (!fecha) {
@@ -26,39 +22,32 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
       setFecha(localDate.toISOString().slice(0, 16));
     }
   }, []);
-
   // Cargar clientes y tipo de cambio - Se recarga cada vez que se abre el modal
   useEffect(() => {
     if (!open) return;
-    
     const fetchData = async () => {
       try {
         // Cargar clientes
         const clientesRes = await fetch('/api/cliente', { cache: 'no-store' });
         const clientesData = await clientesRes.json();
         setClientes(Array.isArray(clientesData?.data) ? clientesData.data : []);
-
         // Cargar tipo de cambio actual (siempre actualizado)
         const exchangeRes = await fetch('/api/tipo-cambio?latest=true', { cache: 'no-store' });
         const exchangeData = await exchangeRes.json();
         const rateData = exchangeData?.data || null;
         setExchangeRate(rateData);
-        
         // Pre-llenar el tipo de cambio manual si existe
         if (rateData && !tipoCambioManual) {
           setTipoCambioManual(rateData.usd_ars_venta?.toString() || '');
         }
       } catch (error) {
-        console.error('Error cargando datos:', error);
         setClientes([]);
         setExchangeRate(null);
       }
     };
-    
     // Recargar cada vez que se abre el modal
     fetchData();
   }, [open]);
-
   // Cargar saldo disponible cuando cambia el cliente
   useEffect(() => {
     const loadSaldoCliente = async () => {
@@ -66,7 +55,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
         setSaldoDisponible(null);
         return;
       }
-
       try {
         // Cargar todos los movimientos del cliente
         const response = await fetch(`/api/liquidez?cliente_id=${clienteId}&limit=1000`, {
@@ -74,28 +62,22 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
         });
         const data = await response.json();
         const movimientos = Array.isArray(data?.data) ? data.data : [];
-
         // Calcular saldo TOTAL en USD (todo convertido a USD)
         let saldoTotalUSD = 0;
-
         movimientos.forEach(mov => {
           const montoUSD = parseFloat(mov.monto_usd) || 0;
           const multiplicador = mov.tipo_mov === 'deposito' ? 1 : -1;
           saldoTotalUSD += montoUSD * multiplicador;
         });
-
         setSaldoDisponible({
           totalUSD: saldoTotalUSD
         });
       } catch (error) {
-        console.error('Error cargando saldo del cliente:', error);
         setSaldoDisponible(null);
       }
     };
-
     loadSaldoCliente();
   }, [clienteId, open]);
-
   // Pre-llenar formulario cuando se edita
   useEffect(() => {
     if (editingMovement) {
@@ -119,34 +101,28 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
       // tipoCambioManual se llena desde el useEffect de arriba
     }
   }, [editingMovement, open]);
-
   const handleSave = async () => {
     if (!clienteId || !fecha || !monto) {
       alert('Por favor completa todos los campos obligatorios');
       return;
     }
-
     if (!tipoCambioManual || parseFloat(tipoCambioManual) <= 0) {
       alert('Por favor ingresa un tipo de cambio v├ílido');
       return;
     }
-
     const montoNum = parseFloat(monto);
     const tipoCambioNum = parseFloat(tipoCambioManual);
-
     // Validar saldo disponible para extracciones
     if (tipoMov === 'extraccion' && saldoDisponible) {
       // Convertir el monto a retirar a USD para comparar
       const montoRetiroUSD = tipoCambio === 'usd' 
         ? montoNum 
         : montoNum / tipoCambioNum;
-      
       if (montoRetiroUSD > saldoDisponible.totalUSD) {
         // Calcular cu├ínto puede retirar en la moneda seleccionada
         const disponibleEnMoneda = tipoCambio === 'usd'
           ? saldoDisponible.totalUSD
           : saldoDisponible.totalUSD * tipoCambioNum;
-        
         const monedaLabel = tipoCambio === 'usd' ? 'USD' : 'ARS';
         alert(`Saldo insuficiente. Disponible: ${disponibleEnMoneda.toLocaleString('es-AR', { 
           minimumFractionDigits: 2, 
@@ -155,10 +131,8 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
         return;
       }
     }
-
     setLoading(true);
     try {
-      
       const payload = {
         cliente_id: parseInt(clienteId),
         fecha: new Date(fecha).toISOString(),
@@ -167,7 +141,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
         monto: montoNum,
         comentario: comentario.trim() || null,
       };
-
       // Calcular conversiones basadas en el tipo de cambio manual
       if (tipoCambio === 'usd') {
         // Si ingres├│ USD, guardamos USD y calculamos ARS
@@ -178,28 +151,22 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
         payload.tipo_cambio_usado = tipoCambioNum;
         payload.monto_usd = montoNum / tipoCambioNum;
       }
-
       if (editingMovement) {
         payload.id = editingMovement.id_mov_liq || editingMovement.id_liq;
       }
-
       await onSave?.(payload);
     } catch (error) {
-      console.error('Error guardando movimiento:', error);
       alert('Error al guardar el movimiento');
     } finally {
       setLoading(false);
     }
   };
-
   const handleClose = () => {
     if (!loading) {
       onClose?.();
     }
   };
-
   if (!open) return null;
-
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleClose()}>
       <div className="modal-content" style={{ maxWidth: '500px', width: '90%' }}>
@@ -214,7 +181,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
             Ô£ò
           </button>
         </div>
-
         <div className="modal-body">
           <div className="form-group">
             <label htmlFor="cliente">Cliente *</label>
@@ -233,7 +199,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
               ))}
             </select>
           </div>
-
           <div className="form-group">
             <label htmlFor="fecha">Fecha *</label>
             <input
@@ -245,7 +210,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
               required
             />
           </div>
-
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="tipoMov">Tipo de Movimiento *</label>
@@ -260,7 +224,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
                 <option value="extraccion">Extracci├│n</option>
               </select>
             </div>
-
             <div className="form-group">
               <label htmlFor="tipoCambio">Moneda *</label>
               <select
@@ -275,7 +238,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
               </select>
             </div>
           </div>
-
           {/* Mostrar saldo disponible solo para extracciones */}
           {tipoMov === 'extraccion' && clienteId && saldoDisponible && tipoCambioManual && parseFloat(tipoCambioManual) > 0 && (
             <div style={{
@@ -324,7 +286,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
                     })}
                   </div>
                 </div>
-                
                 {/* ARS - Convertido seg├║n tipo de cambio */}
                 <div style={{ 
                   padding: '10px', 
@@ -347,7 +308,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
                   </div>
                 </div>
               </div>
-              
               {/* Advertencia si no hay saldo */}
               {saldoDisponible.totalUSD <= 0 && (
                 <div style={{
@@ -365,7 +325,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
                   No hay saldo disponible para retirar
                 </div>
               )}
-              
               {/* Nota explicativa */}
               <div style={{
                 marginTop: '8px',
@@ -378,7 +337,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
               </div>
             </div>
           )}
-
           <div className="form-group">
             <label htmlFor="tipoCambioManual">
               Tipo de Cambio USD/ARS *
@@ -403,7 +361,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
               Ingresa el tipo de cambio a utilizar para esta operaci├│n
             </small>
           </div>
-
           <div className="form-group">
             <label htmlFor="monto">
               Monto en {tipoCambio === 'usd' ? 'USD' : 'ARS'} *
@@ -419,7 +376,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
               disabled={loading}
               required
             />
-            
             {/* Conversi├│n autom├ítica */}
             {tipoCambioManual && monto && parseFloat(tipoCambioManual) > 0 && parseFloat(monto) > 0 && (
               <div className="conversion-display" style={{
@@ -454,7 +410,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
               </div>
             )}
           </div>
-
           <div className="form-group">
             <label htmlFor="comentario">Comentario</label>
             <textarea
@@ -467,7 +422,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
             />
           </div>
         </div>
-
         <div className="modal-footer">
           <button 
             className="btn" 
@@ -485,7 +439,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           </button>
         </div>
       </div>
-
       <style jsx>{`
         .modal-overlay {
           position: fixed;
@@ -499,7 +452,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           justify-content: center;
           z-index: 1000;
         }
-
         .modal-content {
           background: white;
           border-radius: 12px;
@@ -507,7 +459,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           max-height: 90vh;
           overflow-y: auto;
         }
-
         .modal-header {
           display: flex;
           justify-content: space-between;
@@ -516,14 +467,12 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           border-bottom: 1px solid #e5e7eb;
           margin-bottom: 24px;
         }
-
         .modal-header h2 {
           margin: 0;
           font-size: 1.5rem;
           font-weight: 600;
           color: #111827;
         }
-
         .btn-close {
           background: transparent;
           border: none;
@@ -532,32 +481,26 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           color: #6b7280;
           padding: 4px;
         }
-
         .btn-close:hover {
           color: #374151;
         }
-
         .modal-body {
           padding: 0 24px;
         }
-
         .form-group {
           margin-bottom: 20px;
         }
-
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
-
         .form-group label {
           display: block;
           margin-bottom: 6px;
           font-weight: 500;
           color: #374151;
         }
-
         .form-group input,
         .form-group select,
         .form-group textarea {
@@ -568,7 +511,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           font-size: 14px;
           transition: border-color 0.2s;
         }
-
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
@@ -576,12 +518,10 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           border-color: #2563eb;
           box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
-
         .form-group textarea {
           resize: vertical;
           min-height: 80px;
         }
-
         .modal-footer {
           display: flex;
           gap: 12px;
@@ -590,7 +530,6 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           border-top: 1px solid #e5e7eb;
           margin-top: 24px;
         }
-
         .btn {
           padding: 10px 20px;
           border-radius: 8px;
@@ -601,38 +540,31 @@ export default function LiquidezModal({ open, onClose, onSave, editingMovement =
           cursor: pointer;
           transition: all 0.2s;
         }
-
         .btn:hover {
           background: #f9fafb;
         }
-
         .btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
-
         .btn.primary {
           background: #2563eb;
           color: white;
           border-color: #2563eb;
         }
-
         .btn.primary:hover:not(:disabled) {
           background: #1d4ed8;
         }
-
         .exchange-info {
           font-size: 12px;
           color: #6b7280;
           font-weight: normal;
           margin-left: 8px;
         }
-
         .exchange-info .rate {
           color: #059669;
           font-weight: 500;
         }
-
         .conversion-info {
           font-size: 12px;
           color: #6b7280;

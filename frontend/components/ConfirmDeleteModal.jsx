@@ -1,6 +1,5 @@
 import { Modal } from "./ui";
 import styles from "../styles/clientes.module.css";
-
 export default function ConfirmDeleteModal({ open, onCancel, onConfirm, text }) {
   return (
     <Modal

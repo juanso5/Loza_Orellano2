@@ -1,20 +1,16 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import EstrategiaDetalle from './EstrategiaDetalle';
-
 export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-
   useEffect(() => {
     if (!isOpen || !fondo?.id_fondo) {
       setMovimientos([]);
       setLoading(true);
       return;
     }
-
     // Cargar movimientos de liquidez
     fetch(`/api/liquidez/movimientos?fondo_id=${fondo.id_fondo}`)
       .then(r => r.json())
@@ -23,15 +19,11 @@ export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
           setMovimientos(data.data);
         }
       })
-      .catch(err => console.error('Error cargando movimientos:', err))
-      .finally(() => setLoading(false));
+      .catch(err => {/* Error al cargar movimientos */});
   }, [isOpen, fondo?.id_fondo]);
-
   if (!isOpen || !fondo) return null;
-
   const nombre_cartera = fondo.tipo_cartera?.descripcion || `Cartera ${fondo.id_fondo}`;
   const color = fondo.tipo_cartera?.color || '#3b82f6';
-
   return (
     <div 
       style={{
@@ -119,7 +111,6 @@ export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
             </svg>
           </button>
         </div>
-
         {/* Body */}
         <div style={{ 
           flex: 1,
@@ -134,7 +125,6 @@ export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
             <EstrategiaDetalle fondo={fondo} movimientos={movimientos} />
           )}
         </div>
-
         {/* Footer */}
         <div style={{ 
           padding: '16px 24px',
@@ -188,7 +178,6 @@ export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
           </button>
         </div>
       </div>
-
       {/* Modal de Confirmación de Eliminación */}
       {deleteConfirmOpen && (
         <div 
@@ -236,11 +225,9 @@ export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
                 </h3>
               </div>
             </div>
-
             <p style={{ margin: '16px 0', fontSize: '0.9375rem', color: '#4b5563', lineHeight: '1.6' }}>
               ¿Estás seguro que querés eliminar el fondo <strong>"{nombre_cartera}"</strong>?
             </p>
-
             <div style={{
               padding: '12px',
               backgroundColor: '#fef3c7',
@@ -253,7 +240,6 @@ export default function DetalleModal({ fondo, isOpen, onClose, onDelete }) {
                 Esta acción eliminará el fondo y <strong>todos sus movimientos asociados</strong>. Esta acción no se puede deshacer.
               </p>
             </div>
-
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setDeleteConfirmOpen(false)}

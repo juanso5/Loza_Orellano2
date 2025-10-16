@@ -5,6 +5,5 @@
  * @example
  * import { useLocalStorageState, useEscapeKey } from '@/lib/hooks';
  */
-
 export { useLocalStorageState } from './useLocalStorageState';
 export { useEscapeKey } from './useEscapeKey';

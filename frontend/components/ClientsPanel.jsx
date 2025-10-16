@@ -3,13 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMovements } from '../components/MovementsProvider';
 import ClientList from '../components/ClientList';
 import { fetchAllClientsWithData, filterClientsByQuery } from '@/lib/clientHelpers';
-
 export default function ClientsPanel({ onSelectClient }) {
   const { clientIdFilter, setClientIdFilter, tick } = useMovements();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState('');
-
   // Recargar clientes cuando cambie tick (movimientos agregados/eliminados)
   useEffect(() => {
     let ignore = false;
@@ -19,7 +17,6 @@ export default function ClientsPanel({ onSelectClient }) {
         const clientsWithData = await fetchAllClientsWithData();
         if (!ignore) setClients(clientsWithData);
       } catch (e) {
-        console.error('Error cargando datos de clientes:', e);
         if (!ignore) setClients([]);
       } finally {
         if (!ignore) setLoading(false);
@@ -28,11 +25,9 @@ export default function ClientsPanel({ onSelectClient }) {
     load();
     return () => { ignore = true; };
   }, [tick]); // Recargar cuando cambien movimientos
-
   const filtered = useMemo(() => {
     return filterClientsByQuery(clients, q);
   }, [clients, q]);
-
   return (
     <aside className="card clients-column" style={{ padding: 0, overflow: 'hidden' }}>
       <div className="card-header" style={{ padding: 12, borderBottom: '1px solid #eef2f6' }}>
@@ -55,7 +50,6 @@ export default function ClientsPanel({ onSelectClient }) {
           )}
         </div>
       </div>
-
       <div style={{ padding: 12 }}>
         {loading ? (
           <div className="muted">Cargando clientes…</div>

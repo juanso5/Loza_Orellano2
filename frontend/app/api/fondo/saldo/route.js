@@ -8,12 +8,9 @@ import {
   calcularRendimientoFondo,
   obtenerResumenFondo
 } from "../../../../lib/fondoHelpers";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 const getSb = () => getSSRClient();
-
 /**
  * GET /api/fondo/saldo
  * 
@@ -26,16 +23,13 @@ const getSb = () => getSSRClient();
 export async function GET(req) {
   const auth = await assertAuthenticated(req);
   if (!auth.ok) return auth.res;
-
   try {
     const sb = await getSb();
     const { searchParams } = new URL(req.url);
-
     const clienteId = parseInt(searchParams.get("cliente_id"));
     const fondoId = searchParams.get("fondo_id") ? parseInt(searchParams.get("fondo_id")) : null;
     const action = searchParams.get("action") || "saldo";
     const incluirPreciosMercado = searchParams.get("incluir_precios_mercado") === "true";
-
     // Validar cliente_id
     if (!clienteId || isNaN(clienteId)) {
       return NextResponse.json(
@@ -43,21 +37,18 @@ export async function GET(req) {
         { status: 400 }
       );
     }
-
     // Verificar que el cliente existe
     const { data: clienteData, error: clienteError } = await sb
       .from("cliente")
       .select("id_cliente, nombre")
       .eq("id_cliente", clienteId)
       .single();
-
     if (clienteError || !clienteData) {
       return NextResponse.json(
         { error: "Cliente no encontrado" },
         { status: 404 }
       );
     }
-
     // Si se especifica fondo_id, verificar que existe y pertenece al cliente
     if (fondoId) {
       const { data: fondoData, error: fondoError } = await sb
@@ -65,14 +56,12 @@ export async function GET(req) {
         .select("id_fondo, cliente_id")
         .eq("id_fondo", fondoId)
         .single();
-
       if (fondoError || !fondoData) {
         return NextResponse.json(
           { error: "Fondo no encontrado" },
           { status: 404 }
         );
       }
-
       if (Number(fondoData.cliente_id) !== clienteId) {
         return NextResponse.json(
           { error: "El fondo no pertenece al cliente especificado" },
@@ -80,10 +69,8 @@ export async function GET(req) {
         );
       }
     }
-
     // Procesar seg├║n la acci├│n solicitada
     let resultado;
-
     switch (action) {
       case "saldo":
         if (fondoId) {
@@ -94,7 +81,6 @@ export async function GET(req) {
           resultado = await calcularSaldosTodosLosFondos(sb, clienteId);
         }
         break;
-
       case "rendimiento":
         if (!fondoId) {
           return NextResponse.json(
@@ -104,7 +90,6 @@ export async function GET(req) {
         }
         resultado = await calcularRendimientoFondo(sb, clienteId, fondoId, incluirPreciosMercado);
         break;
-
       case "resumen":
         if (!fondoId) {
           return NextResponse.json(
@@ -114,19 +99,16 @@ export async function GET(req) {
         }
         resultado = await obtenerResumenFondo(sb, clienteId, fondoId);
         break;
-
       case "todos":
         // Obtener saldos de todos los fondos
         resultado = await calcularSaldosTodosLosFondos(sb, clienteId);
         break;
-
       default:
         return NextResponse.json(
           { error: `Acci├│n desconocida: ${action}` },
           { status: 400 }
         );
     }
-
     return NextResponse.json({
       data: resultado,
       cliente: {
@@ -140,9 +122,7 @@ export async function GET(req) {
         timestamp: new Date().toISOString()
       }
     });
-
   } catch (error) {
-    console.error("Error en GET /api/fondo/saldo:", error);
     return NextResponse.json(
       { 
         error: "Error al procesar la solicitud",

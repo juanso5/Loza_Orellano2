@@ -1,16 +1,12 @@
 'use client';
-
 import { useMemo, useState, useEffect } from 'react';
-
 // Componente común para mostrar especies (CON FILTRO Y SCROLL)
 const EspeciesTable = ({ fondoId }) => {
   const [especies, setEspecies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState('');
-
   useEffect(() => {
     if (!fondoId) return;
-    
     fetch(`/api/movimiento?fondo_id=${fondoId}`)
       .then(r => r.json())
       .then(data => {
@@ -21,10 +17,8 @@ const EspeciesTable = ({ fondoId }) => {
           setEspecies(data.data);
         }
       })
-      .catch(err => console.error('Error cargando especies:', err))
-      .finally(() => setLoading(false));
+      .catch(err => {/* Error al cargar especies */});
   }, [fondoId]);
-
   // Filtrar especies por nombre
   const especiesFiltradas = useMemo(() => {
     if (!filtro.trim()) return especies;
@@ -34,15 +28,12 @@ const EspeciesTable = ({ fondoId }) => {
       return nombre.includes(filtroLower);
     });
   }, [especies, filtro]);
-
   if (loading) {
     return <p style={{ textAlign: 'center', color: '#6b7280', padding: '16px' }}>Cargando especies...</p>;
   }
-
   if (especies.length === 0) {
     return <p style={{ textAlign: 'center', color: '#6b7280', padding: '16px' }}>No hay especies registradas</p>;
   }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {/* Barra de filtro */}
@@ -90,14 +81,12 @@ const EspeciesTable = ({ fondoId }) => {
           </button>
         )}
       </div>
-
       {/* Contador de resultados */}
       {filtro && (
         <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
           Mostrando {especiesFiltradas.length} de {especies.length} especies
         </p>
       )}
-
       {/* Tabla con scroll */}
       <div style={{ 
         overflowX: 'auto',
@@ -170,13 +159,11 @@ const EspeciesTable = ({ fondoId }) => {
     </div>
   );
 };
-
 // Componente común para mostrar depósitos y extracciones (CON SEPARACIÓN)
 const MovimientosLiquidezTable = ({ movimientos }) => {
   if (!movimientos || movimientos.length === 0) {
     return <p style={{ textAlign: 'center', color: '#6b7280', padding: '16px' }}>No hay movimientos de liquidez</p>;
   }
-
   // Separar movimientos manuales de automáticos
   const manuales = movimientos.filter(m => m.origen === 'manual' || (!m.origen && !m.comentario?.includes('automática')));
   const automaticos = movimientos.filter(m => 
@@ -185,26 +172,21 @@ const MovimientosLiquidezTable = ({ movimientos }) => {
     m.comentario?.includes('automática') ||
     m.comentario?.includes('Recupero por venta')
   );
-
   // Calcular balances
   const balanceManuales = manuales.reduce((sum, m) => {
     const monto = Number(m.monto_usd || m.monto || 0);
     const isIngreso = m.tipo_mov === 'deposito' || m.tipo_operacion === 'asignacion';
     return sum + (isIngreso ? monto : -monto);
   }, 0);
-
   const balanceAutomaticos = automaticos.reduce((sum, m) => {
     const monto = Number(m.monto_usd || m.monto || 0);
     const isIngreso = m.tipo_mov === 'deposito' || m.tipo_operacion === 'asignacion';
     return sum + (isIngreso ? monto : -monto);
   }, 0);
-
   const balanceTotal = balanceManuales + balanceAutomaticos;
-
   const renderMovimiento = (mov, showOrigen = false) => {
     const monto = Number(mov.monto_usd || mov.monto || 0);
     const isDeposito = mov.tipo_mov === 'deposito' || mov.tipo_operacion === 'asignacion';
-    
     return (
       <div 
         key={mov.id || mov.id_mov_liq || Math.random()}
@@ -255,7 +237,6 @@ const MovimientosLiquidezTable = ({ movimientos }) => {
       </div>
     );
   };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Asignaciones Manuales */}
@@ -291,7 +272,6 @@ const MovimientosLiquidezTable = ({ movimientos }) => {
           </div>
         </div>
       )}
-
       {/* Movimientos por Trading Automático */}
       {automaticos.length > 0 && (
         <div>
@@ -325,7 +305,6 @@ const MovimientosLiquidezTable = ({ movimientos }) => {
           </div>
         </div>
       )}
-
       {/* Balance Total */}
       <div style={{
         padding: '16px',
@@ -361,7 +340,6 @@ const MovimientosLiquidezTable = ({ movimientos }) => {
     </div>
   );
 };
-
 // Componentes específicos por estrategia
 const JubilacionDetalle = ({ fondo, movimientos }) => {
   return (
@@ -381,7 +359,6 @@ const JubilacionDetalle = ({ fondo, movimientos }) => {
     </div>
   );
 };
-
 const ViajesDetalle = ({ fondo, movimientos }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -400,7 +377,6 @@ const ViajesDetalle = ({ fondo, movimientos }) => {
     </div>
   );
 };
-
 const LargoPlazoDetalle = ({ fondo, movimientos }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -419,7 +395,6 @@ const LargoPlazoDetalle = ({ fondo, movimientos }) => {
     </div>
   );
 };
-
 const ObjetivoDetalle = ({ fondo, movimientos }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -438,12 +413,10 @@ const ObjetivoDetalle = ({ fondo, movimientos }) => {
     </div>
   );
 };
-
 export default function EstrategiaDetalle({ fondo, movimientos }) {
   const estrategia = useMemo(() => {
     return (fondo.metadata?.estrategia || fondo.tipo_cartera?.categoria || '').toLowerCase();
   }, [fondo.metadata?.estrategia, fondo.tipo_cartera?.categoria]);
-
   const DetalleComponent = useMemo(() => {
     switch (estrategia) {
       case 'jubilacion': return JubilacionDetalle;
@@ -453,7 +426,6 @@ export default function EstrategiaDetalle({ fondo, movimientos }) {
       default: return null;
     }
   }, [estrategia]);
-
   if (!DetalleComponent) {
     return (
       <div style={{ padding: '24px', textAlign: 'center', color: '#6b7280' }}>
@@ -461,6 +433,5 @@ export default function EstrategiaDetalle({ fondo, movimientos }) {
       </div>
     );
   }
-
   return <DetalleComponent fondo={fondo} movimientos={movimientos} />;
 }

@@ -9,14 +9,11 @@ import styles from "../../styles/clientes.module.css";
 import { useLocalStorageState } from "@/lib/hooks";
 import { formatCurrency, onlyDigits, formatCuit, normalize } from "@/lib/utils/formatters";
 import { formatEsDate, nowLocalDate } from "@/lib/utils/dateUtils";
-
 // Formatter ARS para UI
 const fmtARS = formatCurrency("ARS");
-
 // ——— Página
 export default function ClientesPage() {
   const [collapsed, setCollapsed] = useLocalStorageState('sidebarCollapsed', false);
-
   const [clients, setClients] = useState([]);
   const [query, setQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -25,7 +22,6 @@ export default function ClientesPage() {
   const [viewing, setViewing] = useState(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
-
   // Cargar desde API
   useEffect(() => {
     (async () => {
@@ -46,12 +42,10 @@ export default function ClientesPage() {
           };
         }));
       } catch (e) {
-        console.error(e);
         setClients([]);
       }
     })();
   }, []);
-
   const filtered = useMemo(() => {
     const q = query.trim();
     if (!q) return clients;
@@ -64,29 +58,24 @@ export default function ClientesPage() {
       return nameMatch || cuitMatch;
     });
   }, [clients, query]);
-
   const openAdd = useCallback(() => { setEditing(null); setShowForm(true); }, []);
   const openEdit = useCallback((c) => { setEditing(c); setShowForm(true); }, []);
   const openView = useCallback((c) => { setViewing(c); setShowView(true); }, []);
   const askDelete = useCallback((c) => { setPendingDelete(c); setShowConfirm(true); }, []);
-
   const handleSave = useCallback(async (values) => {
     const {
       name, phone, riskProfile, serviceType,
       period, fee, banks, comments, joinedLocal,
       bank, bankAlias, // compat si vinieran
     } = values;
-
     // Normalizar fee a número
     let feeNum = undefined;
     if (fee !== "" && fee !== undefined && fee !== null) {
       const f = Number(String(fee).replace(",", "."));
       if (!Number.isNaN(f)) feeNum = f;
     }
-
     // Tomar primer banco para persistir en columnas banco/alias
     const first = Array.isArray(banks) && banks.length ? banks[0] : null;
-
     const payload = {
       nombre: name,
       tipo_servicio: serviceType || null,
@@ -99,7 +88,6 @@ export default function ClientesPage() {
       comentario: comments || null,
       fecha_alta: joinedLocal || null,
     };
-
     try {
       if (editing?.id) {
         const res = await fetch("/api/cliente", {
@@ -148,11 +136,9 @@ export default function ClientesPage() {
       setShowForm(false);
       setEditing(null);
     } catch (e) {
-      console.error(e);
       alert(e.message || "No se pudo guardar el cliente");
     }
   }, [editing]);
-
   const handleDelete = useCallback(async () => {
     if (!pendingDelete) return;
     try {
@@ -163,7 +149,6 @@ export default function ClientesPage() {
       });
       if (!res.ok && res.status !== 204) {
         const out = await res.json().catch(() => null);
-        
         // Mensaje específico para foreign key constraint
         if (out?.error?.includes('foreign key') || out?.error?.includes('still referenced')) {
           throw new Error(
@@ -171,27 +156,23 @@ export default function ClientesPage() {
             `Por favor, elimine primero sus movimientos de liquidez, fondos y carteras.`
           );
         }
-        
         throw new Error(out?.error || "Error al eliminar cliente");
       }
       setClients((prev) => prev.filter((x) => x.id !== pendingDelete.id));
       setShowConfirm(false);
       setPendingDelete(null);
     } catch (e) {
-      console.error(e);
       setShowConfirm(false);
       setPendingDelete(null);
       alert(e.message || "No se pudo eliminar el cliente");
     }
   }, [pendingDelete]);
-
   return (
     <>
       <Sidebar
         collapsed={collapsed}
         toggleSidebar={() => setCollapsed(c => !c)}
       />
-
       <div className={`main-content ${collapsed ? "expanded" : ""}`} style={{ padding: 24 }}>
         <main style={{ background: "#fff", padding: 18, borderRadius: 12 }}>
           {/* Buscador + botón alta */}
@@ -207,11 +188,9 @@ export default function ClientesPage() {
               <i className="fas fa-plus" /> Agregar Cliente
             </button>
           </div>
-
           {/* Lista */}
           <section className={styles.clientsSection}>
             <h2>Lista de Clientes</h2>
-
             {filtered.length === 0 ? (
               <div className={styles.empty}>
                 {query ? "No hay clientes que coincidan." : "Sin clientes aún."}
@@ -232,7 +211,6 @@ export default function ClientesPage() {
           </section>
         </main>
       </div>
-
       {/* Modales */}
       <ClienteFormModal
         open={showForm}
@@ -269,7 +247,6 @@ export default function ClientesPage() {
           formatCuit: (s) => s,
         }}
       />
-
       <ClienteViewModal
         open={showView}
         onClose={() => { setShowView(false); setViewing(null); }}
@@ -277,7 +254,6 @@ export default function ClientesPage() {
         fmtARS={fmtARS}
         formatEsDate={formatEsDate}
       />
-
       <ConfirmDeleteModal
         open={showConfirm}
         onCancel={() => { setShowConfirm(false); setPendingDelete(null); }}

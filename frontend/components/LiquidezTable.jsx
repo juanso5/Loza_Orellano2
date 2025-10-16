@@ -1,16 +1,12 @@
 ﻿// components/  const [sortField, setSortField] = useState('fecha');
   const [sortDirection, setSortDirection] = useState('desc');
-
   // Formatters
   const fmtUSD = formatCurrency('USD');
   const fmtARS = formatCurrency('ARS');
-
   // Formatear fechasx
 'use client';
-
 import { useState, useMemo } from 'react';
 import { formatCurrency } from '@/lib/utils/formatters';
-
 export default function LiquidezTable({ 
   movements = [], 
   onEdit, 
@@ -21,7 +17,6 @@ export default function LiquidezTable({
 }) {
   const [sortField, setSortField] = useState('fecha');
   const [sortDirection, setSortDirection] = useState('desc');
-
   // Formatear n├║meros
   const formatCurrency = (amount, currency = 'USD') => {
     if (amount == null) return '-';
@@ -32,7 +27,6 @@ export default function LiquidezTable({
       minimumFractionDigits: 2,
     }).format(num);
   };
-
   // Formatear fecha
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -45,7 +39,6 @@ export default function LiquidezTable({
       minute: '2-digit'
     }).format(date);
   };
-
   // Manejar ordenamiento
   const handleSort = (field) => {
     if (sortField === field) {
@@ -55,11 +48,9 @@ export default function LiquidezTable({
       setSortDirection('asc');
     }
   };
-
   // Datos ordenados y filtrados
   const sortedAndFilteredData = useMemo(() => {
     let filtered = [...movements];
-
     // Filtrar por cliente si est├í seleccionado
     if (clientFilter) {
       filtered = filtered.filter(mov => 
@@ -67,12 +58,10 @@ export default function LiquidezTable({
         mov.cliente_nombre?.toLowerCase().includes(clientFilter.toString().toLowerCase())
       );
     }
-
     // Ordenar
     filtered.sort((a, b) => {
       let aVal = a[sortField];
       let bVal = b[sortField];
-
       // Manejar campos espec├¡ficos
       if (sortField === 'fecha') {
         aVal = new Date(aVal).getTime();
@@ -84,32 +73,26 @@ export default function LiquidezTable({
         aVal = aVal.toLowerCase();
         bVal = bVal.toLowerCase();
       }
-
       if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
       return 0;
     });
-
     return filtered;
   }, [movements, clientFilter, sortField, sortDirection]);
-
   // Calcular totales
   const totals = useMemo(() => {
     return sortedAndFilteredData.reduce((acc, mov) => {
       const amount = Number(mov.monto) || 0;
       const currency = mov.tipo_cambio;
       const isDeposit = mov.tipo_mov === 'deposito';
-
       if (currency === 'usd') {
         acc.usd += isDeposit ? amount : -amount;
       } else {
         acc.ars += isDeposit ? amount : -amount;
       }
-
       return acc;
     }, { usd: 0, ars: 0 });
   }, [sortedAndFilteredData]);
-
   const SortIcon = ({ field }) => {
     if (sortField !== field) {
       return <span className="sort-icon">Ôçà</span>;
@@ -120,7 +103,6 @@ export default function LiquidezTable({
       </span>
     );
   };
-
   if (loading) {
     return (
       <div className="table-loading">
@@ -129,7 +111,6 @@ export default function LiquidezTable({
       </div>
     );
   }
-
   return (
     <div className="liquidez-table-container">
       {/* Resumen de totales */}
@@ -151,7 +132,6 @@ export default function LiquidezTable({
           <span className="count">{sortedAndFilteredData.length}</span>
         </div>
       </div>
-
       {/* Tabla */}
       <div className="table-wrapper">
         <table className="liquidez-table">
@@ -236,7 +216,6 @@ export default function LiquidezTable({
           </tbody>
         </table>
       </div>
-
       <style jsx>{`
         .liquidez-table-container {
           background: white;
@@ -244,7 +223,6 @@ export default function LiquidezTable({
           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
           overflow: hidden;
         }
-
         .table-loading {
           display: flex;
           flex-direction: column;
@@ -253,7 +231,6 @@ export default function LiquidezTable({
           padding: 60px 20px;
           color: #6b7280;
         }
-
         .loading-spinner {
           width: 40px;
           height: 40px;
@@ -263,12 +240,10 @@ export default function LiquidezTable({
           animation: spin 1s linear infinite;
           margin-bottom: 16px;
         }
-
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-
         .totals-summary {
           display: flex;
           gap: 24px;
@@ -277,49 +252,40 @@ export default function LiquidezTable({
           border-bottom: 1px solid #e5e7eb;
           flex-wrap: wrap;
         }
-
         .total-item {
           display: flex;
           flex-direction: column;
           align-items: center;
           min-width: 120px;
         }
-
         .total-item .label {
           font-size: 12px;
           color: #6b7280;
           font-weight: 500;
           margin-bottom: 4px;
         }
-
         .total-item .amount {
           font-size: 16px;
           font-weight: 600;
         }
-
         .total-item .amount.positive {
           color: #059669;
         }
-
         .total-item .amount.negative {
           color: #dc2626;
         }
-
         .total-item .count {
           font-size: 16px;
           font-weight: 600;
           color: #374151;
         }
-
         .table-wrapper {
           overflow-x: auto;
         }
-
         .liquidez-table {
           width: 100%;
           border-collapse: collapse;
         }
-
         .liquidez-table th {
           background: #f9fafb;
           padding: 12px 16px;
@@ -329,54 +295,44 @@ export default function LiquidezTable({
           border-bottom: 1px solid #e5e7eb;
           white-space: nowrap;
         }
-
         .liquidez-table th.sortable {
           cursor: pointer;
           user-select: none;
           transition: background-color 0.2s;
         }
-
         .liquidez-table th.sortable:hover {
           background: #f3f4f6;
         }
-
         .sort-icon {
           margin-left: 6px;
           opacity: 0.5;
         }
-
         .sort-icon.active {
           opacity: 1;
           color: #2563eb;
         }
-
         .liquidez-table td {
           padding: 12px 16px;
           border-bottom: 1px solid #f3f4f6;
         }
-
         .data-row:hover {
           background: #fafbfc;
         }
-
         .empty-state {
           text-align: center;
           color: #6b7280;
           font-style: italic;
           padding: 40px 16px;
         }
-
         .date-cell {
           font-family: monospace;
           font-size: 13px;
           color: #6b7280;
         }
-
         .client-cell {
           font-weight: 500;
           color: #374151;
         }
-
         .type-badge {
           padding: 4px 8px;
           border-radius: 6px;
@@ -384,51 +340,41 @@ export default function LiquidezTable({
           font-weight: 500;
           text-transform: capitalize;
         }
-
         .type-badge.deposito {
           background: #dcfce7;
           color: #166534;
         }
-
         .type-badge.extraccion {
           background: #fee2e2;
           color: #991b1b;
         }
-
         .amount-cell {
           text-align: right;
           font-weight: 600;
           font-family: monospace;
         }
-
         .amount.deposit {
           color: #059669;
         }
-
         .amount.withdrawal {
           color: #dc2626;
         }
-
         .comment-cell {
           max-width: 200px;
           color: #6b7280;
           font-size: 14px;
         }
-
         .no-comment {
           color: #d1d5db;
         }
-
         .actions-cell {
           width: 100px;
         }
-
         .action-buttons {
           display: flex;
           gap: 8px;
           justify-content: flex-end;
         }
-
         .btn-edit,
         .btn-delete {
           background: transparent;
@@ -439,33 +385,27 @@ export default function LiquidezTable({
           transition: background-color 0.2s;
           font-size: 14px;
         }
-
         .btn-edit:hover {
           background: #e0f2fe;
         }
-
         .btn-delete:hover {
           background: #fee2e2;
         }
-
         @media (max-width: 768px) {
           .totals-summary {
             flex-direction: column;
             gap: 12px;
           }
-
           .total-item {
             flex-direction: row;
             justify-content: space-between;
             align-items: center;
           }
-
           .liquidez-table th,
           .liquidez-table td {
             padding: 8px 12px;
             font-size: 14px;
           }
-
           .comment-cell {
             max-width: 150px;
           }

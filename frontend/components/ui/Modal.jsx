@@ -2,7 +2,6 @@
 'use client';
 import { useEffect } from 'react';
 import { useEscapeKey } from '@/lib/hooks';
-
 /**
  * Componente Modal base reutilizable
  * Proporciona estructura consistente para todos los modales
@@ -28,7 +27,6 @@ export default function Modal({
 }) {
   // Cerrar con tecla Escape
   useEscapeKey(open ? onClose : null);
-
   // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
     if (open) {
@@ -38,24 +36,19 @@ export default function Modal({
       };
     }
   }, [open]);
-
   if (!open) return null;
-
   const sizeClasses = {
     small: "modal-dialog-small",
     medium: "modal-dialog",
     large: "modal-dialog-large", 
     xlarge: "modal-dialog-xlarge"
   };
-
   const dialogClass = sizeClasses[size] || sizeClasses.medium;
-
   const handleOverlayClick = (e) => {
     if (closeOnOverlayClick && e.target === e.currentTarget) {
       onClose?.();
     }
   };
-
   return (
     <div
       className={`modal ${className}`}
@@ -81,11 +74,9 @@ export default function Modal({
               </button>
             </header>
           )}
-
           <div className="modal-body">
             {children}
           </div>
-
           {footer && (
             <div className="modal-footer">
               {footer}
@@ -96,7 +87,6 @@ export default function Modal({
     </div>
   );
 }
-
 /**
  * Componente ModalFooter para botones estandarizados
  */

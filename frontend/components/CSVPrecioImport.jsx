@@ -1,8 +1,6 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { LoadingSpinner } from './ui';
-
 /**
  * CSVPrecioImport - Componente para importar precios desde CSV de Inviu
  * 
@@ -19,7 +17,6 @@ export default function CSVPrecioImport({ onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
-
   // Cargar TC actual al abrir
   useEffect(() => {
     fetch('/api/tipo-cambio-actual')
@@ -29,50 +26,41 @@ export default function CSVPrecioImport({ onSuccess }) {
           setTipoCambio(data.data.valor.toString());
         }
       })
-      .catch(err => console.log('No se pudo cargar TC actual'));
+      .catch(err => {/* Error al cargar tipo cambio */});
   }, []);
-
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     // Validar que sea CSV
     if (!file.name.endsWith('.csv')) {
       setError('El archivo debe ser un CSV (.csv)');
       return;
     }
-
     // Validar tamaño (máx 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('El archivo es demasiado grande (máx 5MB)');
       return;
     }
-
     setCsvFile(file);
     setError('');
     setResult(null);
   };
-
   const handleImport = async () => {
     if (!csvFile || !tipoCambio) {
       setError('Debe seleccionar un archivo CSV y especificar el tipo de cambio');
       return;
     }
-
     const tc = parseFloat(tipoCambio);
     if (isNaN(tc) || tc <= 0) {
       setError('El tipo de cambio debe ser un número positivo');
       return;
     }
-
     setLoading(true);
     setError('');
     setResult(null);
-
     try {
       // Leer archivo como texto
       const text = await csvFile.text();
-      
       // Enviar a API
       const response = await fetch('/api/precio/import', {
         method: 'POST',
@@ -82,19 +70,15 @@ export default function CSVPrecioImport({ onSuccess }) {
           tipo_cambio_default: tc
         })
       });
-
       const data = await response.json();
-      
       if (data.success) {
         setResult(data.data);
-        
         // Actualizar TC actual en base de datos
         await fetch('/api/tipo-cambio-actual', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ valor: tc })
         });
-        
         // Callback de éxito (para refrescar datos en página padre)
         if (onSuccess) {
           onSuccess(data.data);
@@ -102,23 +86,19 @@ export default function CSVPrecioImport({ onSuccess }) {
       } else {
         setError(data.error || 'Error al importar CSV');
         if (data.details) {
-          console.error('Detalles del error:', data.details);
-        }
+          }
       }
     } catch (err) {
-      console.error('Error en import:', err);
       setError(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
-
   const handleReset = () => {
     setCsvFile(null);
     setResult(null);
     setError('');
   };
-
   return (
     <div className="csv-import-container" style={{
       background: '#fff',
@@ -156,7 +136,6 @@ export default function CSVPrecioImport({ onSuccess }) {
           </p>
         </div>
       </div>
-
       {/* Área de carga de archivo */}
       <div style={{ marginBottom: '1.5rem' }}>
         <label style={{
@@ -168,7 +147,6 @@ export default function CSVPrecioImport({ onSuccess }) {
         }}>
           Archivo CSV de Inviu
         </label>
-        
         <div style={{
           position: 'relative',
           border: '2px dashed #d1d5db',
@@ -213,7 +191,6 @@ export default function CSVPrecioImport({ onSuccess }) {
             }}
             disabled={loading}
           />
-          
           {csvFile ? (
             <div>
               <i className="fas fa-file-csv" style={{ fontSize: '2rem', color: '#10b981', marginBottom: '0.5rem' }}></i>
@@ -237,7 +214,6 @@ export default function CSVPrecioImport({ onSuccess }) {
           )}
         </div>
       </div>
-
       {/* Tipo de cambio */}
       <div style={{ marginBottom: '1.5rem' }}>
         <label style={{
@@ -276,7 +252,6 @@ export default function CSVPrecioImport({ onSuccess }) {
           Usado para convertir precios ARS a USD. Se guardará como TC actual.
         </p>
       </div>
-
       {/* Error */}
       {error && (
         <div style={{
@@ -294,7 +269,6 @@ export default function CSVPrecioImport({ onSuccess }) {
           </div>
         </div>
       )}
-
       {/* Botones */}
       <div style={{ display: 'flex', gap: '1rem' }}>
         <button 
@@ -346,7 +320,6 @@ export default function CSVPrecioImport({ onSuccess }) {
             </>
           )}
         </button>
-
         {(csvFile || result) && !loading && (
           <button 
             onClick={handleReset}
@@ -372,7 +345,6 @@ export default function CSVPrecioImport({ onSuccess }) {
           </button>
         )}
       </div>
-
       {/* Resultado del import */}
       {result && (
         <div style={{
@@ -388,7 +360,6 @@ export default function CSVPrecioImport({ onSuccess }) {
               Importación exitosa
             </span>
           </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
             <div style={{ padding: '0.75rem', backgroundColor: '#fff', borderRadius: '6px', border: '1px solid #d1d5db' }}>
               <div style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '4px' }}>Líneas procesadas</div>
@@ -407,23 +378,19 @@ export default function CSVPrecioImport({ onSuccess }) {
               <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#8b5cf6' }}>{result.queries_ejecutadas}</div>
             </div>
           </div>
-
           {result.tickers_nuevos > 0 && (
             <div style={{ fontSize: '0.875rem', color: '#059669', marginBottom: '0.5rem' }}>
               ✨ {result.tickers_nuevos} ticker{result.tickers_nuevos !== 1 ? 's' : ''} nuevo{result.tickers_nuevos !== 1 ? 's' : ''} creado{result.tickers_nuevos !== 1 ? 's' : ''}
             </div>
           )}
-
           {result.cash_omitido > 0 && (
             <div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
               ⏭️ {result.cash_omitido} línea{result.cash_omitido !== 1 ? 's' : ''} de liquidez omitida{result.cash_omitido !== 1 ? 's' : ''} (ARS, USD, USDC)
             </div>
           )}
-
           <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem' }}>
             Fecha: {result.fecha_importacion} | TC usado: {result.tipo_cambio_usado}
           </div>
-
           {/* Muestra de precios importados */}
           {result.sample && result.sample.length > 0 && (
             <details style={{ marginTop: '1rem' }}>
@@ -466,7 +433,6 @@ export default function CSVPrecioImport({ onSuccess }) {
               </div>
             </details>
           )}
-
           {result.errores && result.errores.length > 0 && (
             <details style={{ marginTop: '1rem' }}>
               <summary style={{ cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', color: '#dc2626' }}>
@@ -481,7 +447,6 @@ export default function CSVPrecioImport({ onSuccess }) {
           )}
         </div>
       )}
-
       <style jsx>{`
         @keyframes spin {
           to { transform: rotate(360deg); }

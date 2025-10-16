@@ -1,5 +1,4 @@
 ﻿"use client";
-
 import { useState, useEffect } from "react";
 import SidebarProvider from "../../components/SidebarProvider";
 import LiquidezSummaryCard from "../../components/liquidez/LiquidezSummaryCard";
@@ -9,13 +8,11 @@ import AsignacionModal from "../../components/liquidez/AsignacionModal";
 import { LoadingSpinner } from "../../components/ui";
 import { useAppData } from "../../components/AppDataProvider";
 import "../../styles/liquidez.css";
-
 export default function LiquidezPage() {
   const { clientes, selectedClientId, setSelectedClientId, liquidez: estadoLiquidez, loading, error, refreshAll } = useAppData();
   const [searchQuery, setSearchQuery] = useState("");
   const [movimientosLiquidez, setMovimientosLiquidez] = useState([]);
   const [loadingMovimientos, setLoadingMovimientos] = useState(false);
-
   useEffect(() => {
     if (!selectedClientId) {
       setMovimientosLiquidez([]);
@@ -25,20 +22,17 @@ export default function LiquidezPage() {
     fetch(`/api/liquidez?cliente_id=${selectedClientId}&limit=20`, { cache: 'no-store' })
       .then(r => r.json())
       .then(json => { if (json.success) setMovimientosLiquidez(json.data || []); })
-      .catch(err => console.error('Error:', err))
+      .catch(err => {/* Error al cargar movimientos */})
       .finally(() => setLoadingMovimientos(false));
   }, [selectedClientId]);
-  
   const [modalState, setModalState] = useState({ 
     movimiento: { isOpen: false, tipo: "deposito" }, 
     asignacion: { isOpen: false, fondo: null }
   });
-  
   const openMovimientoModal = (tipo) => setModalState(prev => ({ ...prev, movimiento: { isOpen: true, tipo } }));
   const closeMovimientoModal = () => setModalState(prev => ({ ...prev, movimiento: { isOpen: false, tipo: "deposito" } }));
   const openAsignacionModal = (fondo) => setModalState(prev => ({ ...prev, asignacion: { isOpen: true, fondo } }));
   const closeAsignacionModal = () => setModalState(prev => ({ ...prev, asignacion: { isOpen: false, fondo: null } }));
-  
   const handleMovimientoSave = async () => {
     await refreshAll();
     if (selectedClientId) {
@@ -48,7 +42,6 @@ export default function LiquidezPage() {
     }
     closeMovimientoModal();
   };
-  
   const handleAsignacionSave = async () => {
     await refreshAll();
     if (selectedClientId) {
@@ -58,10 +51,8 @@ export default function LiquidezPage() {
     }
     closeAsignacionModal();
   };
-
   const clienteActual = clientes.find(c => c.id === selectedClientId);
   const filteredClientes = clientes.filter((c) => c.name?.toLowerCase().includes(searchQuery.toLowerCase()));
-
   return (
     <SidebarProvider>
       <div className="main-content">
@@ -95,7 +86,6 @@ export default function LiquidezPage() {
               onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
             />
           </div>
-          
           <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem' }}>
             {loading.clientes ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
@@ -118,7 +108,6 @@ export default function LiquidezPage() {
               filteredClientes.map((c) => {
                 const isSelected = c.id === selectedClientId;
                 const initials = c.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??';
-                
                 return (
                   <div 
                     key={c.id} 
@@ -192,7 +181,6 @@ export default function LiquidezPage() {
             )}
           </div>
         </div>
-
         <div className="content-panel">
           <div className="page-header">
             <div>
@@ -204,10 +192,8 @@ export default function LiquidezPage() {
               <button className="btn danger" onClick={() => openMovimientoModal("extraccion")} disabled={!selectedClientId || loading.liquidez}><i className="fas fa-minus-circle"></i> Nueva Extracción</button>
             </div>
           </div>
-
           {error && <div className="error-message"><i className="fas fa-exclamation-triangle"></i> {error}</div>}
           {loading.liquidez && <LoadingSpinner text="Cargando datos de liquidez..." />}
-
           {!loading.liquidez && selectedClientId && (
             <>
               <LiquidezSummaryCard estado={estadoLiquidez} loading={loading.liquidez} />
@@ -497,7 +483,6 @@ export default function LiquidezPage() {
               )}
             </>
           )}
-
           {!loading.liquidez && !selectedClientId && (
             <div className="empty-state">
               <div className="empty-state-icon"><i className="fas fa-user-circle" style={{ fontSize: '48px', color: '#9ca3af' }}></i></div>
@@ -507,7 +492,6 @@ export default function LiquidezPage() {
           )}
         </div>
       </div>
-
       <MovimientoModal isOpen={modalState.movimiento.isOpen} onClose={closeMovimientoModal} onSave={handleMovimientoSave} clienteId={selectedClientId} tipo={modalState.movimiento.tipo} />
       <AsignacionModal isOpen={modalState.asignacion.isOpen} onClose={closeAsignacionModal} onSave={handleAsignacionSave} clienteId={selectedClientId} fondo={modalState.asignacion.fondo || {}} />
     </SidebarProvider>

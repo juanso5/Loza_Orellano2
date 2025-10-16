@@ -5,7 +5,6 @@
  * @example
  * import { formatCurrency, formatEsDate, logger } from '@/lib/utils';
  */
-
 // Date utilities
 export {
   toISODateTimeLocal,
@@ -17,7 +16,6 @@ export {
   getDefaultFecha,
   parseDateInput,
 } from './dateUtils';
-
 // Formatters and validators
 export {
   formatCurrency,
@@ -29,7 +27,6 @@ export {
   createARSFormatter,
   clamp01,
 } from './formatters';
-
 // Logger
 export {
   logger,

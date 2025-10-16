@@ -3,12 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMovements } from './MovementsProvider';
 import ClientHoldingsCard from './ClientHoldingsCard';
 import { fetchClients, filterClientsByQuery } from '@/lib/clientHelpers';
-
 export default function ClientsHoldingsList({ onAdd }) {
   const { query } = useMovements();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     let ignore = false;
     (async () => {
@@ -28,14 +26,11 @@ export default function ClientsHoldingsList({ onAdd }) {
     })();
     return () => { ignore = true; };
   }, []);
-
   const filtered = useMemo(() => {
     return filterClientsByQuery(clients, query);
   }, [clients, query]);
-
   if (loading) return <div className="muted" style={{ padding: 8 }}>Cargando clientes…</div>;
   if (filtered.length === 0) return <div className="muted" style={{ padding: 8 }}>Sin clientes</div>;
-
   return (
     <section aria-label="Patrimonio por cliente" style={{ display: 'grid', gap: 12, marginBottom: 20 }}>
       {filtered.map(c => (

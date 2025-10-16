@@ -1,17 +1,13 @@
 ﻿"use client";
-
 import { useState, useEffect } from "react";
-
 export default function FondoLiquidezStatus({ clienteId, fondoId }) {
   const [estado, setEstado] = useState(null);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (clienteId && fondoId) {
       fetchEstado();
     }
   }, [clienteId, fondoId]);
-
   const fetchEstado = async () => {
     setLoading(true);
     try {
@@ -19,18 +15,15 @@ export default function FondoLiquidezStatus({ clienteId, fondoId }) {
         cache: "no-store",
       });
       const json = await res.json();
-
       if (json.success && json.data && json.data.fondos) {
         const fondoEstado = json.data.fondos.find(f => f.id_fondo === fondoId);
         setEstado(fondoEstado || null);
       }
     } catch (err) {
-      console.error("Error cargando estado:", err);
-    } finally {
+      } finally {
       setLoading(false);
     }
   };
-
   if (loading) {
     return (
       <div className="card" style={{ marginBottom: "20px" }}>
@@ -40,24 +33,19 @@ export default function FondoLiquidezStatus({ clienteId, fondoId }) {
       </div>
     );
   }
-
   if (!estado) return null;
-
   const getColorByPercentage = (percentage) => {
     if (percentage >= 80) return { color: "#e74c3c", bg: "#fff1f2" };
     if (percentage >= 50) return { color: "#f39c12", bg: "#fff9e6" };
     return { color: "#27ae60", bg: "#d1fae5" };
   };
-
   const colors = getColorByPercentage(estado.porcentajeInvertido || 0);
-
   return (
     <div className="card" style={{ marginBottom: "20px" }}>
       <div className="card-body">
         <h3 style={{ marginBottom: "16px", fontSize: "1.1rem", fontWeight: 700 }}>
           ­ƒÆ░ Estado de Liquidez
         </h3>
-
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px", marginBottom: "16px" }}>
           <div style={{ textAlign: "center" }}>
             <div className="muted" style={{ fontSize: "0.85rem", marginBottom: "4px" }}>
@@ -67,7 +55,6 @@ export default function FondoLiquidezStatus({ clienteId, fondoId }) {
               ${estado.liquidezAsignada?.toFixed(2) || "0.00"}
             </div>
           </div>
-
           <div style={{ textAlign: "center" }}>
             <div className="muted" style={{ fontSize: "0.85rem", marginBottom: "4px" }}>
               En Acciones
@@ -76,7 +63,6 @@ export default function FondoLiquidezStatus({ clienteId, fondoId }) {
               ${estado.dineroEnAcciones?.toFixed(2) || "0.00"}
             </div>
           </div>
-
           <div style={{ textAlign: "center" }}>
             <div className="muted" style={{ fontSize: "0.85rem", marginBottom: "4px" }}>
               Disponible
@@ -86,7 +72,6 @@ export default function FondoLiquidezStatus({ clienteId, fondoId }) {
             </div>
           </div>
         </div>
-
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
             <span className="muted" style={{ fontSize: "0.85rem" }}>Utilizacion</span>
@@ -111,7 +96,6 @@ export default function FondoLiquidezStatus({ clienteId, fondoId }) {
             />
           </div>
         </div>
-
         {estado.saldoDisponible <= 0 && (
           <div
             style={{

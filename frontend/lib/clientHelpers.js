@@ -2,7 +2,6 @@
 /**
  * Helpers para operaciones con clientes
  */
-
 /**
  * Carga clientes desde la API
  * @returns {Promise<Array>} Lista de clientes
@@ -13,7 +12,6 @@ export async function fetchClients() {
   const json = await res.json();
   return Array.isArray(json?.data) ? json.data : [];
 }
-
 /**
  * Carga fondos (carteras) de un cliente específico
  * @param {number} clientId - ID del cliente
@@ -25,7 +23,6 @@ export async function fetchClientFunds(clientId) {
   const json = await res.json();
   return Array.isArray(json?.data) ? json.data : [];
 }
-
 /**
  * Carga movimientos de un cliente específico
  * @param {number} clientId - ID del cliente
@@ -38,7 +35,6 @@ export async function fetchClientMovements(clientId, limit = 10000) {
   const json = await res.json();
   return Array.isArray(json?.data) ? json.data : [];
 }
-
 /**
  * Carga un cliente con sus fondos y movimientos
  * @param {Object} client - Objeto cliente básico
@@ -46,13 +42,11 @@ export async function fetchClientMovements(clientId, limit = 10000) {
  */
 export async function fetchClientWithData(client) {
   const clientId = Number(client.id ?? client.id_cliente ?? 0);
-  
   try {
     const [portfolios, movements] = await Promise.all([
       fetchClientFunds(clientId),
       fetchClientMovements(clientId)
     ]);
-    
     return {
       id: clientId,
       name: client.name || client.nombre || '',
@@ -60,7 +54,6 @@ export async function fetchClientWithData(client) {
       movements,
     };
   } catch (error) {
-    console.error(`Error cargando datos del cliente ${clientId}:`, error);
     return {
       id: clientId,
       name: client.name || client.nombre || '',
@@ -69,7 +62,6 @@ export async function fetchClientWithData(client) {
     };
   }
 }
-
 /**
  * Carga todos los clientes con sus datos completos
  * @returns {Promise<Array>} Lista de clientes con portfolios y movements
@@ -78,7 +70,6 @@ export async function fetchAllClientsWithData() {
   const clients = await fetchClients();
   return Promise.all(clients.map(fetchClientWithData));
 }
-
 /**
  * Normaliza un objeto cliente para uso en UI
  * @param {Object} rawClient - Cliente crudo de la API
@@ -90,7 +81,6 @@ export function normalizeClient(rawClient) {
     : (rawClient.bank 
         ? [{ name: rawClient.bank, alias: rawClient.alias || rawClient.bankAlias || "" }] 
         : []);
-  
   return {
     ...rawClient,
     id: Number(rawClient.id ?? rawClient.id_cliente ?? 0),
@@ -100,7 +90,6 @@ export function normalizeClient(rawClient) {
     joinedAt: rawClient.joinedAt || new Date().toISOString(),
   };
 }
-
 /**
  * Filtra clientes por query de búsqueda
  * @param {Array} clients - Lista de clientes

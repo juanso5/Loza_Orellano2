@@ -1,6 +1,5 @@
 // components/ui/LoadingSpinner.jsx
 'use client';
-
 /**
  * Componente reutilizable de spinner de carga
  * @param {string} text - Texto a mostrar debajo del spinner
@@ -12,9 +11,7 @@ export default function LoadingSpinner({ text = "Cargando...", size = "medium" }
     medium: { container: "loading-container", spinner: "spinner" },
     large: { container: "loading-container-large", spinner: "spinner-large" }
   };
-
   const classes = sizeClasses[size] || sizeClasses.medium;
-
   return (
     <div className={classes.container}>
       <div className={classes.spinner}></div>

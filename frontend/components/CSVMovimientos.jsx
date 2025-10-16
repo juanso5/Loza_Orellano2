@@ -7,15 +7,12 @@ import ClientsPanel from './ClientsPanel';
 import ClientsHoldingsList from './ClientsHoldingsList';
 import MovementModal from './MovementModal';
 import CSVPrecioImport from './CSVPrecioImport';
-
 function Toolbar({ onAdd, viewMode, setViewMode }) {
   const fileRef = useRef(null);
   const { query, setQuery, uploadState, setUploadState, refreshFirstPage, refreshPrices } = useMovements();
   const debouncedQuery = useDebouncedValue(query, 280);
   useEffect(() => {}, [debouncedQuery]);
-
   const onFileClick = () => fileRef.current?.click();
-
   const onFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -45,12 +42,8 @@ function Toolbar({ onAdd, viewMode, setViewMode }) {
       }
       const result = await res.json();
       const mensaje = result.message || 'Precios actualizados';
-      console.log('Resultado CSV:', result);
-      
       if (result.errores && result.errores.length > 0) {
-        console.warn('Errores encontrados:', result.errores);
-      }
-      
+        }
       setUploadState({ status: 'done', message: mensaje });
       await refreshPrices();       // NUEVO: volver a leer precios desde DB y notificar
       refreshFirstPage();          // refrescar primeras p├íginas por si hay dependencias
@@ -61,7 +54,6 @@ function Toolbar({ onAdd, viewMode, setViewMode }) {
       setTimeout(() => setUploadState({ status: 'idle', message: '' }), 3000);
     }
   };
-
   return (
     <header className="page-header">
       <div className="page-left"><h1>Movimientos</h1></div>
@@ -110,10 +102,8 @@ function Toolbar({ onAdd, viewMode, setViewMode }) {
     </header>
   );
 }
-
 function MovementsContent({ onSelectClient, onAdd, viewMode }) {
   const { filteredItems, loading, error, fetchNextPage, hasMore, deleteMovement } = useMovements();
-
   if (viewMode === 'holdings') {
     return (
       <div style={{ 
@@ -126,7 +116,6 @@ function MovementsContent({ onSelectClient, onAdd, viewMode }) {
       </div>
     );
   }
-
   return (
     <>
       {/* Layout con panel de clientes + tabla virtualizada */}
@@ -150,23 +139,19 @@ function MovementsContent({ onSelectClient, onAdd, viewMode }) {
     </>
   );
 }
-
 export default function CSVMovimientos() {
   const [addOpen, setAddOpen] = useState(false);
   const [prefClient, setPrefClient] = useState(null);
   const [viewMode, setViewMode] = useState('holdings'); // 'holdings' | 'movements'
   const [showPrecioImport, setShowPrecioImport] = useState(false);
-
   const openAddFor = (clientId) => {
     setPrefClient(clientId ?? null);
     setAddOpen(true);
   };
-
   return (
     <MovementsProvider>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
         <Toolbar onAdd={() => openAddFor(prefClient)} viewMode={viewMode} setViewMode={setViewMode} />
-        
         {/* Botón para abrir import de precios */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
           <button 
@@ -179,14 +164,12 @@ export default function CSVMovimientos() {
             {showPrecioImport ? 'Ocultar' : 'Importar'} Precios desde CSV (Inviu)
           </button>
         </div>
-
         {/* Componente de import colapsable */}
         {showPrecioImport && (
           <div style={{ maxWidth: 900, margin: '0 auto', width: '100%' }}>
             <CSVPrecioImport />
           </div>
         )}
-
         <MovementsContent
           onSelectClient={(id) => setPrefClient(id)}
           onAdd={(clientId) => openAddFor(clientId)}

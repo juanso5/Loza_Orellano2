@@ -1,36 +1,27 @@
 import { NextResponse } from "next/server";
 import { assertAuthenticated } from "../../../lib/authGuard";
 import { getSSRClient } from "../../../lib/supabaseServer";
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 const getSb = () => getSSRClient();
-
 // GET - Obtener tipos de cartera
 export async function GET(req) {
   const auth = await assertAuthenticated(req);
   if (!auth.ok) return auth.res;
-
   try {
     const sb = await getSb();
     const { searchParams } = new URL(req.url);
     const soloActivos = searchParams.get("activos") !== "false";
-
     let query = sb
       .from("tipo_cartera")
       .select("*")
       .order("orden", { ascending: true })
       .order("descripcion", { ascending: true });
-
     if (soloActivos) {
       query = query.eq("activo", true);
     }
-
     const { data, error } = await query;
-
     if (error) throw error;
-
     return NextResponse.json({
       success: true,
       data: (data || []).map((t) => ({
@@ -46,32 +37,26 @@ export async function GET(req) {
       })),
     });
   } catch (e) {
-    console.error("GET /api/tipo-cartera error:", e);
     return NextResponse.json(
       { success: false, error: e.message },
       { status: 500 }
     );
   }
 }
-
 // POST - Crear nuevo tipo de cartera personalizado
 export async function POST(req) {
   const auth = await assertAuthenticated(req);
   if (!auth.ok) return auth.res;
-
   try {
     const sb = await getSb();
     const body = await req.json();
-
     const { descripcion, categoria, color, icono, descripcion_larga } = body;
-
     if (!descripcion || descripcion.trim() === "") {
       return NextResponse.json(
         { success: false, error: "La descripción es obligatoria" },
         { status: 400 }
       );
     }
-
     const insertData = {
       descripcion: descripcion.trim(),
       categoria: categoria || "personalizada",
@@ -82,15 +67,12 @@ export async function POST(req) {
       activo: true,
       orden: 900, // Las personalizadas van al final
     };
-
     const { data, error } = await sb
       .from("tipo_cartera")
       .insert(insertData)
       .select("*")
       .single();
-
     if (error) throw error;
-
     return NextResponse.json({
       success: true,
       data: {
@@ -106,7 +88,6 @@ export async function POST(req) {
       },
     });
   } catch (e) {
-    console.error("POST /api/tipo-cartera error:", e);
     return NextResponse.json(
       { success: false, error: e.message },
       { status: 500 }

@@ -2,7 +2,6 @@
  * Utilidades para formateo de números, moneda y validaciones
  * Centraliza toda la lógica de formato y validación de datos
  */
-
 /**
  * Formatea un monto como moneda
  * @param {number} amount - Monto a formatear
@@ -18,7 +17,6 @@ export function formatCurrency(amount, currency = 'ARS', decimals = 2) {
     maximumFractionDigits: decimals,
   }).format(amount || 0);
 }
-
 /**
  * Formatea un número con separadores de miles
  * @param {number} n - Número a formatear
@@ -31,7 +29,6 @@ export function formatNumber(n, decimals = 2) {
     maximumFractionDigits: decimals,
   });
 }
-
 /**
  * Extrae solo dígitos de un string
  * @param {string} s - String del cual extraer dígitos
@@ -40,7 +37,6 @@ export function formatNumber(n, decimals = 2) {
 export function onlyDigits(s = '') {
   return String(s).replace(/\D/g, '');
 }
-
 /**
  * Formatea un CUIT con guiones (XX-XXXXXXXX-X)
  * @param {string} cuit - CUIT sin formato
@@ -51,7 +47,6 @@ export function formatCuit(cuit) {
   if (digits.length !== 11) return cuit || '';
   return `${digits.slice(0, 2)}-${digits.slice(2, 10)}-${digits.slice(10)}`;
 }
-
 /**
  * Valida si un CUIT tiene formato válido (11 dígitos)
  * @param {string} cuit - CUIT a validar
@@ -61,7 +56,6 @@ export function isValidCuit(cuit) {
   const digits = onlyDigits(cuit);
   return digits.length === 11;
 }
-
 /**
  * Normaliza un string para búsqueda (lowercase, sin acentos)
  * @param {string} s - String a normalizar
@@ -73,7 +67,6 @@ export function normalize(s = '') {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 }
-
 /**
  * Crea un formatter ARS reutilizable (para compatibilidad)
  * @returns {Intl.NumberFormat} - Formatter de Intl
@@ -85,7 +78,6 @@ export function createARSFormatter() {
     maximumFractionDigits: 2,
   });
 }
-
 /**
  * Limita un número entre 0 y 1
  * @param {number} n - Número a limitar

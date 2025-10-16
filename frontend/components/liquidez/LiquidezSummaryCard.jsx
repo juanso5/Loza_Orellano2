@@ -1,5 +1,4 @@
 ﻿"use client";
-
 export default function LiquidezSummaryCard({ estado, loading }) {
   if (loading) {
     return (
@@ -44,9 +43,7 @@ export default function LiquidezSummaryCard({ estado, loading }) {
       </div>
     );
   }
-
   if (!estado) return null;
-
   const cards = [
     {
       title: 'Liquidez Total',
@@ -82,7 +79,6 @@ export default function LiquidezSummaryCard({ estado, loading }) {
       description: 'Histórico'
     }
   ];
-
   return (
     <div style={{ 
       display: 'grid', 
@@ -147,7 +143,6 @@ export default function LiquidezSummaryCard({ estado, loading }) {
               </div>
             )}
           </div>
-
           {/* Título */}
           <h3 style={{ 
             fontSize: '0.75rem', 
@@ -159,7 +154,6 @@ export default function LiquidezSummaryCard({ estado, loading }) {
           }}>
             {card.title}
           </h3>
-
           {/* Valor principal */}
           <div style={{
             display: 'flex',
@@ -183,7 +177,6 @@ export default function LiquidezSummaryCard({ estado, loading }) {
               color: '#9ca3af'
             }}>USD</span>
           </div>
-
           {/* Descripción */}
           <div style={{ 
             display: 'flex',

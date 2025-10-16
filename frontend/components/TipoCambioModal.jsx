@@ -1,16 +1,12 @@
 ﻿// components/TipoCambioModal.jsx
 'use client';
-
 import { useState, useEffect } from 'react';
-
 export default function TipoCambioModal({ open, onClose, onSave, editingRate = null }) {
   const [loading, setLoading] = useState(false);
-  
   // Datos del formulario
   const [fecha, setFecha] = useState('');
   const [usdArsCompra, setUsdArsCompra] = useState('');
   const [usdArsVenta, setUsdArsVenta] = useState('');
-
   // Inicializar fecha actual
   useEffect(() => {
     if (!fecha && !editingRate) {
@@ -19,7 +15,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
       setFecha(localDate);
     }
   }, [fecha, editingRate]);
-
   // Pre-llenar formulario cuando se edita
   useEffect(() => {
     if (editingRate) {
@@ -35,23 +30,19 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
       setUsdArsVenta('');
     }
   }, [editingRate, open]);
-
   const handleSave = async () => {
     if (!fecha || !usdArsCompra || !usdArsVenta) {
       alert('Por favor completa todos los campos');
       return;
     }
-
     if (parseFloat(usdArsCompra) <= 0 || parseFloat(usdArsVenta) <= 0) {
       alert('Los tipos de cambio deben ser mayores a 0');
       return;
     }
-
     if (parseFloat(usdArsCompra) > parseFloat(usdArsVenta)) {
       alert('El tipo de cambio de compra no puede ser mayor al de venta');
       return;
     }
-
     setLoading(true);
     try {
       const payload = {
@@ -59,33 +50,26 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
         usd_ars_compra: parseFloat(usdArsCompra),
         usd_ars_venta: parseFloat(usdArsVenta),
       };
-
       if (editingRate) {
         payload.id = editingRate.id_tipo_cambio;
       }
-
       await onSave?.(payload);
     } catch (error) {
-      console.error('Error guardando tipo de cambio:', error);
       alert('Error al guardar el tipo de cambio');
     } finally {
       setLoading(false);
     }
   };
-
   const handleClose = () => {
     if (!loading) {
       onClose?.();
     }
   };
-
   // Calcular spread
   const spread = usdArsCompra && usdArsVenta ? 
     ((parseFloat(usdArsVenta) - parseFloat(usdArsCompra)) / parseFloat(usdArsCompra) * 100).toFixed(2) 
     : null;
-
   if (!open) return null;
-
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && handleClose()}>
       <div className="modal-content" style={{ maxWidth: '500px', width: '90%' }}>
@@ -100,7 +84,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
             Ô£ò
           </button>
         </div>
-
         <div className="modal-body">
           <div className="form-group">
             <label htmlFor="fecha">Fecha *</label>
@@ -113,7 +96,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
               required
             />
           </div>
-
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="compra">USD/ARS Compra *</label>
@@ -129,7 +111,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
                 required
               />
             </div>
-
             <div className="form-group">
               <label htmlFor="venta">USD/ARS Venta *</label>
               <input
@@ -145,7 +126,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
               />
             </div>
           </div>
-
           {spread && (
             <div className="spread-info">
               <div className="spread-label">Spread:</div>
@@ -154,7 +134,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
               </div>
             </div>
           )}
-
           <div className="info-box">
             <div className="info-item">
               <strong>­ƒÆí Consejos:</strong>
@@ -170,7 +149,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
             </div>
           </div>
         </div>
-
         <div className="modal-footer">
           <button 
             className="btn" 
@@ -188,7 +166,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           </button>
         </div>
       </div>
-
       <style jsx>{`
         .modal-overlay {
           position: fixed;
@@ -202,7 +179,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           justify-content: center;
           z-index: 1000;
         }
-
         .modal-content {
           background: white;
           border-radius: 12px;
@@ -210,7 +186,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           max-height: 90vh;
           overflow-y: auto;
         }
-
         .modal-header {
           display: flex;
           justify-content: space-between;
@@ -219,14 +194,12 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           border-bottom: 1px solid #e5e7eb;
           margin-bottom: 24px;
         }
-
         .modal-header h2 {
           margin: 0;
           font-size: 1.5rem;
           font-weight: 600;
           color: #111827;
         }
-
         .btn-close {
           background: transparent;
           border: none;
@@ -235,32 +208,26 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           color: #6b7280;
           padding: 4px;
         }
-
         .btn-close:hover {
           color: #374151;
         }
-
         .modal-body {
           padding: 0 24px;
         }
-
         .form-group {
           margin-bottom: 20px;
         }
-
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
-
         .form-group label {
           display: block;
           margin-bottom: 6px;
           font-weight: 500;
           color: #374151;
         }
-
         .form-group input {
           width: 100%;
           padding: 10px 12px;
@@ -269,13 +236,11 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           font-size: 14px;
           transition: border-color 0.2s;
         }
-
         .form-group input:focus {
           outline: none;
           border-color: #2563eb;
           box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
-
         .spread-info {
           display: flex;
           align-items: center;
@@ -285,25 +250,20 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           border-radius: 8px;
           margin-bottom: 20px;
         }
-
         .spread-label {
           font-weight: 500;
           color: #374151;
         }
-
         .spread-value {
           font-weight: 600;
           font-size: 16px;
         }
-
         .spread-value.normal {
           color: #059669;
         }
-
         .spread-value.high {
           color: #d97706;
         }
-
         .info-box {
           background: #eff6ff;
           border: 1px solid #bfdbfe;
@@ -311,17 +271,14 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           padding: 16px;
           margin-bottom: 20px;
         }
-
         .info-item {
           font-size: 14px;
           color: #1e40af;
           margin-bottom: 6px;
         }
-
         .info-item:last-child {
           margin-bottom: 0;
         }
-
         .modal-footer {
           display: flex;
           gap: 12px;
@@ -330,7 +287,6 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           border-top: 1px solid #e5e7eb;
           margin-top: 24px;
         }
-
         .btn {
           padding: 10px 20px;
           border-radius: 8px;
@@ -341,22 +297,18 @@ export default function TipoCambioModal({ open, onClose, onSave, editingRate = n
           cursor: pointer;
           transition: all 0.2s;
         }
-
         .btn:hover {
           background: #f9fafb;
         }
-
         .btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }
-
         .btn.primary {
           background: #2563eb;
           color: white;
           border-color: #2563eb;
         }
-
         .btn.primary:hover:not(:disabled) {
           background: #1d4ed8;
         }

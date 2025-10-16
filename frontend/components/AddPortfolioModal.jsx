@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
-
 /**
  * AddPortfolioModal - Crear nueva cartera con campos dinámicos según estrategia
  * 
@@ -15,20 +14,16 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
   const [clientes, setClientes] = useState([]);
   const [tiposCartera, setTiposCartera] = useState([]);
   const [liquidezDisponible, setLiquidezDisponible] = useState(null);
-  
   // Formulario base
   const [clienteIdForm, setClienteIdForm] = useState(clienteId || '');
   const [tipoCarteraId, setTipoCarteraId] = useState('');
   const [liquidezInicial, setLiquidezInicial] = useState('');
   const [nombreFondo, setNombreFondo] = useState('');
-  
   // Campos de metadata dinámicos
   const [metadata, setMetadata] = useState({});
-
   // Cargar clientes
   useEffect(() => {
     if (clienteId) return; // Si ya tenemos cliente, no cargamos
-    
     fetch('/api/cliente', { cache: 'no-store' })
       .then(r => r.json())
       .then(j => {
@@ -38,9 +33,8 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
           nombre: c.name || c.nombre || 'Sin nombre'
         })));
       })
-      .catch(err => console.error('Error cargando clientes:', err));
+      .catch(err => {/* Error al cargar clientes */});
   }, [clienteId]);
-
   // Cargar tipos de cartera
   useEffect(() => {
     fetch('/api/tipo-cartera', { cache: 'no-store' })
@@ -50,9 +44,8 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
         // Filtrar solo los activos y ordenar
         setTiposCartera(list.filter(t => t.activo));
       })
-      .catch(err => console.error('Error cargando tipos de cartera:', err));
+      .catch(err => {/* Error al cargar tipos de cartera */});
   }, []);
-
   // Cargar liquidez disponible cuando se selecciona cliente
   useEffect(() => {
     const cid = clienteIdForm || clienteId;
@@ -60,7 +53,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
       setLiquidezDisponible(null);
       return;
     }
-
     fetch(`/api/liquidez/estado?cliente_id=${cid}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(j => {
@@ -68,14 +60,12 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
           setLiquidezDisponible(j.data.liquidezDisponible || 0);
         }
       })
-      .catch(err => console.error('Error cargando liquidez:', err));
+      .catch(err => {/* Error al cargar liquidez */});
   }, [clienteIdForm, clienteId]);
-
   // Limpiar metadata cuando cambia el tipo de cartera
   useEffect(() => {
     setMetadata({});
   }, [tipoCarteraId]);
-
   // Obtener la categoría del tipo de cartera seleccionado
   const categoriaSeleccionada = useMemo(() => {
     const tipo = tiposCartera.find(t => Number(t.id) === Number(tipoCarteraId));
@@ -83,35 +73,27 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
     // Normalizar categoría a minúsculas para comparación
     return tipo.categoria.trim().toLowerCase();
   }, [tipoCarteraId, tiposCartera]);
-
   // Validaciones
   const errors = useMemo(() => {
     const errs = {};
-    
     if (!clienteIdForm && !clienteId) {
       errs.cliente = 'Debe seleccionar un cliente';
     }
-    
     if (!tipoCarteraId || tipoCarteraId === '' || tipoCarteraId === '0') {
       errs.tipo_cartera = 'Debe seleccionar un tipo de cartera';
     }
-
     if (!nombreFondo || nombreFondo.trim() === '') {
       errs.nombre = 'El nombre del fondo es requerido';
     }
-
     if (nombreFondo && nombreFondo.length > 255) {
       errs.nombre = 'El nombre no puede superar los 255 caracteres';
     }
-
     if (liquidezInicial && parseFloat(liquidezInicial) < 0) {
       errs.liquidez_inicial = 'La liquidez debe ser mayor o igual a 0';
     }
-
     if (liquidezInicial && liquidezDisponible !== null && parseFloat(liquidezInicial) > liquidezDisponible) {
       errs.liquidez_inicial = `Solo hay $${liquidezDisponible.toFixed(2)} USD disponibles`;
     }
-
     // Validaciones por estrategia
   if (categoriaSeleccionada === 'jubilacion') {
       if (!metadata.anos) errs.anos = 'Requerido';
@@ -130,16 +112,12 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
         errs.monto_objetivo_usd = 'Monto objetivo en USD es requerido';
       }
     }
-
     return errs;
   }, [clienteIdForm, clienteId, tipoCarteraId, liquidezInicial, liquidezDisponible, categoriaSeleccionada, metadata]);
-
   const canSubmit = Object.keys(errors).length === 0 && !loading;
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!canSubmit) return;
-
     setLoading(true);
     try {
       // Validar que tipo_cartera_id no esté vacío
@@ -148,7 +126,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
         setLoading(false);
         return;
       }
-
       const payload = {
         cliente_id: Number(clienteIdForm || clienteId),
         tipo_cartera_id: Number(tipoCarteraId),
@@ -160,11 +137,9 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
         liquidez_inicial: liquidezInicial ? parseFloat(liquidezInicial) : 0,
         metadata: null,
       };
-
       // Agregar metadata según la estrategia
       if (categoriaSeleccionada) {
         const metadataParsed = { estrategia: categoriaSeleccionada };
-        
         // Parsear campos según estrategia
         if (categoriaSeleccionada === 'jubilacion') {
           const anosNum = Number(metadata.anos);
@@ -182,9 +157,7 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
           if (!usd || usd <= 0) {
             throw new Error('Monto objetivo en USD es requerido');
           }
-          
           metadataParsed.monto_objetivo_usd = usd;
-          
           // Tipo de cambio opcional
           if (metadata.tipo_cambio) {
             const tc = parseFloat(metadata.tipo_cambio);
@@ -193,22 +166,18 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               metadataParsed.monto_objetivo_ars = usd * tc;
             }
           }
-          
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         } else if (categoriaSeleccionada === 'objetivo') {
           if (!metadata.fecha_objetivo) {
             throw new Error('Fecha objetivo es requerida');
           }
           metadataParsed.fecha_objetivo = metadata.fecha_objetivo;
-          
           // USD + Tipo de Cambio
           const usd = parseFloat(metadata.monto_objetivo_usd);
           if (!usd || usd <= 0) {
             throw new Error('Monto objetivo en USD es requerido');
           }
-          
           metadataParsed.monto_objetivo_usd = usd;
-          
           // Tipo de cambio opcional
           if (metadata.tipo_cambio) {
             const tc = parseFloat(metadata.tipo_cambio);
@@ -217,24 +186,18 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               metadataParsed.monto_objetivo_ars = usd * tc;
             }
           }
-          
           if (metadata.comentario) metadataParsed.comentario = metadata.comentario;
         }
-        
         payload.metadata = metadataParsed;
       }
-
-      console.log('Payload a enviar:', payload);
       await onSave(payload);
       onClose();
     } catch (err) {
-      console.error('Error al crear cartera:', err);
       alert(err.message || 'Error al crear la cartera');
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div 
       className="modal" 
@@ -247,7 +210,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
           <h2>Agregar Nuevo Fondo</h2>
           <button type="button" className="modal-close" onClick={onClose} disabled={loading}>×</button>
         </header>
-
         <form onSubmit={handleSubmit} className="modal-body">
           {/* Cliente */}
           {!clienteId && (
@@ -267,7 +229,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               {errors.cliente && <small style={{ color: '#d32f2f' }}>{errors.cliente}</small>}
             </label>
           )}
-
           {/* Tipo de Cartera */}
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span>Estrategia <span style={{ color: '#d32f2f' }}>*</span></span>
@@ -286,7 +247,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
             </select>
             {errors.tipo_cartera && <small style={{ color: '#d32f2f' }}>{errors.tipo_cartera}</small>}
           </label>
-
           {/* Nombre del Fondo */}
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span>Nombre del Fondo <span style={{ color: '#d32f2f' }}>*</span></span>
@@ -304,7 +264,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
             </small>
             {errors.nombre && <small style={{ color: '#d32f2f' }}>{errors.nombre}</small>}
           </label>
-
           {/* Campos dinámicos según estrategia */}
           {categoriaSeleccionada === 'jubilacion' && (
             <>
@@ -319,7 +278,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   Planificá tu retiro a largo plazo
                 </p>
               </div>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Años Objetivo <span style={{ color: '#d32f2f' }}>*</span></span>
                 <input
@@ -335,7 +293,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                 <small style={{ color: '#666' }}>¿Cuántos años faltan para tu jubilación?</small>
                 {errors.anos && <small style={{ color: '#d32f2f' }}>{errors.anos}</small>}
               </label>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Rendimiento Esperado (%)</span>
                 <input
@@ -350,7 +307,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                 />
                 <small style={{ color: '#666' }}>Opcional: Rendimiento anual esperado</small>
               </label>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Comentario</span>
                 <textarea
@@ -363,7 +319,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               </label>
             </>
           )}
-
           {categoriaSeleccionada === 'largo_plazo' && (
             <>
               <div style={{ 
@@ -377,7 +332,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   Inversiones a largo plazo sin fecha específica
                 </p>
               </div>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Comentario</span>
                 <textarea
@@ -390,7 +344,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               </label>
             </>
           )}
-
           {categoriaSeleccionada === 'viajes' && (
             <>
               <div style={{ 
@@ -404,7 +357,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   Define tu objetivo en USD y el tipo de cambio esperado
                 </p>
               </div>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>💵 Objetivo (USD) <span style={{ color: '#d32f2f' }}>*</span></span>
                 <input
@@ -419,7 +371,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                 />
                 {errors.monto_objetivo_usd && <small style={{ color: '#d32f2f' }}>{errors.monto_objetivo_usd}</small>}
               </label>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>� Tipo de Cambio Esperado (USD → ARS)</span>
                 <input
@@ -435,7 +386,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   Opcional. Si lo definís, se calculará el equivalente en ARS
                 </small>
               </label>
-
               {metadata.monto_objetivo_usd && metadata.tipo_cambio && (
                 <div style={{ 
                   padding: '0.75rem',
@@ -448,7 +398,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   <strong>Equivalente:</strong> ARS ${(parseFloat(metadata.monto_objetivo_usd) * parseFloat(metadata.tipo_cambio)).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Comentario</span>
                 <textarea
@@ -461,7 +410,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               </label>
             </>
           )}
-
           {categoriaSeleccionada === 'objetivo' && (
             <>
               <div style={{ 
@@ -475,7 +423,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   Define tu meta en USD, fecha objetivo y tipo de cambio esperado
                 </p>
               </div>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Fecha Objetivo <span style={{ color: '#d32f2f' }}>*</span></span>
                 <input
@@ -488,7 +435,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                 />
                 {errors.fecha_objetivo && <small style={{ color: '#d32f2f' }}>{errors.fecha_objetivo}</small>}
               </label>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>💵 Objetivo (USD) <span style={{ color: '#d32f2f' }}>*</span></span>
                 <input
@@ -503,7 +449,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                 />
                 {errors.monto_objetivo_usd && <small style={{ color: '#d32f2f' }}>{errors.monto_objetivo_usd}</small>}
               </label>
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>� Tipo de Cambio Esperado (USD → ARS)</span>
                 <input
@@ -519,7 +464,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   Opcional. Si lo definís, se calculará el equivalente en ARS
                 </small>
               </label>
-
               {metadata.monto_objetivo_usd && metadata.tipo_cambio && (
                 <div style={{ 
                   padding: '0.75rem',
@@ -532,7 +476,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
                   <strong>Equivalente:</strong> ARS ${(parseFloat(metadata.monto_objetivo_usd) * parseFloat(metadata.tipo_cambio)).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
-
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span>Comentario</span>
                 <textarea
@@ -545,7 +488,6 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               </label>
             </>
           )}
-
           {/* Liquidez Inicial */}
           {liquidezDisponible !== null && (
             <div style={{ 
@@ -582,9 +524,7 @@ export default function AddPortfolioModal({ onClose, onSave, clienteId = null })
               </small>
             </div>
           )}
-
         </form>
-
         <footer className="modal-footer">
           <button type="button" className="btn-close" onClick={onClose} disabled={loading}>
             <i className="fas fa-times"></i> Cancelar
