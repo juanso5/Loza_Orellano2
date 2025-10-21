@@ -12,9 +12,14 @@ import '../styles/movimientos.css';
 import '../components/ui/ui-components.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { AppDataProvider } from '../components/AppDataProvider';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="es">
+      <head>
+        {/* Preload Font Awesome fonts */}
+        <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
+      </head>
       <body>
         <AppDataProvider>
           {children}

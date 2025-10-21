@@ -12,7 +12,11 @@ export default function FondoCard({ fondo, onAsignar }) {
   } = fondo;
   const color = tipo_cartera?.color || '#8b5cf6';
   const nombreFondo = nombre || tipo_cartera?.descripcion || 'Sin nombre';
-  const icono = tipo_cartera?.icono || 'fas fa-chart-line';
+  const iconoRaw = tipo_cartera?.icono || 'fas fa-chart-line';
+  // Detectar si es emoji o clase de Font Awesome
+  const esEmoji = iconoRaw && !iconoRaw.includes('fa-') && iconoRaw.length <= 4;
+  const icono = esEmoji ? null : iconoRaw;
+  const emoji = esEmoji ? iconoRaw : null;
   const progreso = progreso_porcentaje || 0;
   const rendimiento = rendimiento_porcentaje || 0;
   // Color dinámico para progreso
@@ -73,13 +77,13 @@ export default function FondoCard({ fondo, onAsignar }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '1.5rem',
-          color: color,
+          fontSize: emoji ? '1.75rem' : '1.5rem',
+          color: emoji ? 'inherit' : color,
           border: `2px solid ${color}50`,
           flexShrink: 0,
           boxShadow: `0 4px 12px ${color}25`
         }}>
-          <i className={icono}></i>
+          {emoji ? emoji : <i className={icono}></i>}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3 style={{ 
